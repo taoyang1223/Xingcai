@@ -11,6 +11,8 @@ import (
 	configapi "github.com/taoyang1223/Xingcai/services/server/internal/config/api"
 	feedbackapi "github.com/taoyang1223/Xingcai/services/server/internal/feedback/api"
 	identityapi "github.com/taoyang1223/Xingcai/services/server/internal/identity/api"
+	identityrepo "github.com/taoyang1223/Xingcai/services/server/internal/identity/repo"
+	identitysvc "github.com/taoyang1223/Xingcai/services/server/internal/identity/service"
 	recommendapi "github.com/taoyang1223/Xingcai/services/server/internal/recommend/api"
 	"github.com/taoyang1223/Xingcai/services/server/internal/shared/health"
 	"github.com/taoyang1223/Xingcai/services/server/internal/shared/middleware"
@@ -35,7 +37,13 @@ func (a *App) Router() *gin.Engine {
 	r.GET("/readyz", h.Ready)
 
 	api := r.Group("/api/v1")
-	identityapi.Register(api)
+	ident := identitysvc.New(identitysvc.Deps{
+		Repo:      identityrepo.New(a.PG),
+		Box:       a.Box,
+		JWTSecret: []byte(a.Cfg.JWTSecret),
+		Env:       a.Cfg.Env,
+	})
+	identityapi.Register(api, ident, []byte(a.Cfg.JWTSecret))
 	bodyapi.Register(api)
 	catalogapi.Register(api)
 	recommendapi.Register(api)

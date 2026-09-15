@@ -10,9 +10,11 @@ type Config struct {
 	AlgoGRPCAddr   string
 	MigrationsDir  string
 	CryptoKeyHex   string
+	JWTSecret      string
 }
 
 func Load() Config {
+	cryptoKey := getenv("FITME_CRYPTO_KEY", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
 	return Config{
 		Env:           getenv("FITME_ENV", "dev"),
 		HTTPAddr:      getenv("FITME_HTTP_ADDR", ":8080"),
@@ -20,7 +22,8 @@ func Load() Config {
 		RedisAddr:     getenv("FITME_REDIS_ADDR", "127.0.0.1:6379"),
 		AlgoGRPCAddr:  getenv("FITME_ALGO_GRPC_ADDR", "127.0.0.1:19090"),
 		MigrationsDir: getenv("FITME_MIGRATIONS_DIR", "./migrations"),
-		CryptoKeyHex:  getenv("FITME_CRYPTO_KEY", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"),
+		CryptoKeyHex:  cryptoKey,
+		JWTSecret:     getenv("FITME_JWT_SECRET", cryptoKey),
 	}
 }
 

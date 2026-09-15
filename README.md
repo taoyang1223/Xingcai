@@ -8,7 +8,7 @@
 
 ```
 contract/                 唯一契约（OpenAPI / proto / 错误码 / 埋点）
-apps/                     Flutter App（骨架期后建）
+apps/                     C 端（现为 Web 对照设计稿；Flutter 在相机批次立）
 web/                      React 后台空壳
 services/server/          Go 模块化单体
 services/algo/            Python 算法桩（Measure / OCR）
@@ -27,7 +27,11 @@ make dev         # 起 algo + api，前台日志
 # 另开终端
 curl -s http://127.0.0.1:8080/healthz
 curl -s http://127.0.0.1:8080/readyz
+# C 端登录/首页
+cd apps/fitme && npm install && npm run dev   # http://127.0.0.1:5174
 ```
+
+开发环境微信/支付宝登录不拉实名，用设备号建匿名账号。手机号验证码填 `000000`。
 
 `/healthz` 表示进程存活；`/readyz` 会探 postgres、redis、algo gRPC。
 

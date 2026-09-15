@@ -22,6 +22,8 @@ __pycache__/
 # Web
 web/node_modules/
 web/dist/
+apps/fitme/node_modules/
+apps/fitme/dist/
 
 # Flutter App
 apps/.dart_tool/

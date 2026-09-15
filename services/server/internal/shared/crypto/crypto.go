@@ -3,7 +3,9 @@ package crypto
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -12,6 +14,7 @@ import (
 
 // Box 是围度等敏感字段的唯一加解密入口。业务模块禁止自己实现 AES。
 type Box struct {
+	key []byte
 	gcm cipher.AEAD
 }
 
@@ -31,7 +34,14 @@ func New(hexKey string) (*Box, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Box{gcm: gcm}, nil
+	return &Box{key: raw, gcm: gcm}, nil
+}
+
+// HMACHex 用于手机号查找哈希。禁止把明文手机号写入日志或查询条件以外的存储。
+func (b *Box) HMACHex(plain string) string {
+	mac := hmac.New(sha256.New, b.key)
+	_, _ = mac.Write([]byte(plain))
+	return hex.EncodeToString(mac.Sum(nil))
 }
 
 func (b *Box) Encrypt(plain []byte) ([]byte, error) {

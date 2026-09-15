@@ -52,8 +52,21 @@ paths:
     post:
       tags: [identity]
       operationId: sendSms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: { type: string }
       responses:
-        "501": { $ref: "#/components/responses/NotImplemented" }
+        "200":
+          description: 开发环境确认收到；不记录手机号明文
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
   /api/v1/auth/login:
     post:
       tags: [identity]
@@ -64,11 +77,20 @@ paths:
           application/json:
             schema:
               type: object
+              required: [provider]
               properties:
+                provider: { type: string, description: wechat / alipay / phone }
                 phone: { type: string }
                 code: { type: string }
-                provider: { type: string, description: phone/wechat/apple }
+                device_id: { type: string, description: 开发环境微信/支付宝用设备号当 open_id }
       responses:
+        "200":
+          description: 匿名会话
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "400": { $ref: "#/components/responses/NotImplemented" }
         "501": { $ref: "#/components/responses/NotImplemented" }
   /api/v1/auth/refresh:
     post:
@@ -81,13 +103,28 @@ paths:
       tags: [identity]
       operationId: logout
       responses:
-        "501": { $ref: "#/components/responses/NotImplemented" }
-  /api/v1/user/profile:
+        "200":
+          description: 客户端丢弃 token 即可
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
     get:
       tags: [identity]
       operationId: getUserProfile
       responses:
-        "501": { $ref: "#/components/responses/NotImplemented" }
+        "200":
+          description: 不含真实姓名与证件号
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
   /api/v1/user/consents:
     get:
       tags: [identity]
