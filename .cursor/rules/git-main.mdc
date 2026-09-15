@@ -1,0 +1,16 @@
+---
+description: FitMe 主干发布约定（允许骨架覆盖 main）
+alwaysApply: true
+---
+
+# Git 主干
+
+本仓 `main` 是 FitMe 架构代码，不是旧小说历史。
+
+用户要求把架构/骨架推到主分支时：
+
+1. 用 `--force-with-lease` 推到 `origin/main`（只覆盖已知旧尖端）。
+2. 不要用无 lease 的 `git push --force`。
+3. 订阅配置、`.env`、节点 yaml（如 `sswtich.yaml`）不得进仓。
+
+骨架稳定后，新功能仍走 feature 分支，不要把强推当日常发版。

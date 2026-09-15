@@ -41,3 +41,6 @@ apps/**/build/
 # 既有
 配置文件.yaml
 *.yaml.bak
+
+# clash subscription (secrets)
+sswtich.yaml
