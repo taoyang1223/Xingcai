@@ -1,0 +1,171 @@
+openapi: 3.1.0
+info:
+  title: FitMe API
+  version: 0.1.0
+  description: |
+    C 端 `/api/v1` 与后台 `/admin/v1` 的唯一契约。
+    改接口先改本文件，再 `make gen-api`。骨架期业务接口返回 50002。
+servers:
+  - url: http://127.0.0.1:8080
+    description: local
+tags:
+  - name: health
+  - name: identity
+  - name: body
+  - name: catalog
+  - name: recommend
+  - name: admin
+
+paths:
+  /healthz:
+    get:
+      tags: [health]
+      summary: 存活探测
+      operationId: healthz
+      responses:
+        "200":
+          description: process up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+  /readyz:
+    get:
+      tags: [health]
+      summary: 依赖就绪（postgres / redis / algo）
+      operationId: readyz
+      responses:
+        "200":
+          description: all deps ok
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+        "503":
+          description: degraded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Envelope"
+
+  /api/v1/auth/sms/send:
+    post:
+      tags: [identity]
+      operationId: sendSms
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+  /api/v1/auth/login:
+    post:
+      tags: [identity]
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone: { type: string }
+                code: { type: string }
+                provider: { type: string, description: phone/wechat/apple }
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+  /api/v1/auth/refresh:
+    post:
+      tags: [identity]
+      operationId: refreshToken
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+  /api/v1/auth/logout:
+    post:
+      tags: [identity]
+      operationId: logout
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+  /api/v1/user/profile:
+    get:
+      tags: [identity]
+      operationId: getUserProfile
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+  /api/v1/user/consents:
+    get:
+      tags: [identity]
+      operationId: listConsents
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+    post:
+      tags: [identity]
+      operationId: upsertConsent
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+
+  /api/v1/body/profiles:
+    get:
+      tags: [body]
+      operationId: listBodyProfiles
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+    post:
+      tags: [body]
+      summary: 手动建档（批次 D 实现）
+      operationId: createBodyProfile
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+
+  /api/v1/catalog/parse:
+    post:
+      tags: [catalog]
+      operationId: parseProduct
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+  /api/v1/catalog/products/{uid}/size-chart:
+    post:
+      tags: [catalog]
+      summary: 手填尺码表（批次 D 实现）
+      operationId: submitSizeChart
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema: { type: string }
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+
+  /api/v1/recommend/size:
+    post:
+      tags: [recommend]
+      summary: 尺码推荐（批次 D 实现）
+      operationId: recommendSize
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+
+  /admin/v1/auth/login:
+    post:
+      tags: [admin]
+      operationId: adminLogin
+      responses:
+        "501": { $ref: "#/components/responses/NotImplemented" }
+
+components:
+  schemas:
+    Envelope:
+      type: object
+      required: [code, message, trace_id]
+      properties:
+        code: { type: integer }
+        message: { type: string }
+        data: {}
+        trace_id: { type: string }
+  responses:
+    NotImplemented:
+      description: 骨架期未实现
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Envelope"
+          example:
+            code: 50002
+            message: 骨架期未实现
+            data: null
+            trace_id: "..."

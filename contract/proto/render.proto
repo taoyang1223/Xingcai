@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package fitme.algo.v1;
+
+option go_package = "github.com/taoyang1223/Xingcai/services/server/internal/shared/pb/renderv1;renderv1";
+
+service RenderService {
+  rpc RenderTryOn (TryOnRequest) returns (ImageResult);
+}
+
+message TryOnRequest {
+  string profile_uid = 1;
+  string product_uid = 2;
+  string size_label = 3;
+}
+
+message ImageResult {
+  string image_key = 1;
+  string message = 2;
+}

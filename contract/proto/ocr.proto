@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package fitme.algo.v1;
+
+option go_package = "github.com/taoyang1223/Xingcai/services/server/internal/shared/pb/ocrv1;ocrv1";
+
+service OcrService {
+  rpc ParseSizeChart (ImageRef) returns (TableResult);
+}
+
+message ImageRef {
+  string oss_key = 1;
+}
+
+message TableCell {
+  string header = 1;
+  string value = 2;
+  float confidence = 3;
+}
+
+message TableRow {
+  string size_label = 1;
+  repeated TableCell cells = 2;
+}
+
+message TableResult {
+  repeated TableRow rows = 1;
+  string measure_mode = 2; // flat / circumference / unknown
+  float confidence = 3;
+  string message = 4;      // 桩实现返回「请手填」
+}

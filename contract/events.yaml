@@ -1,0 +1,26 @@
+# 埋点事件字典。禁止上报围度原值。
+version: 1
+events:
+  onboarding_consent_result:
+    params: [scene, granted]
+  body_modeling_start:
+    params: [source]
+  body_modeling_step:
+    params: [source, step, duration_ms]
+  body_modeling_finish:
+    params: [source, duration_ms, fail_reason]
+  body_measure_corrected:
+    params: [part, delta]
+    notes: 只传差值，不传原值
+  catalog_parse_result:
+    params: [status, category, confidence]
+  recommend_view:
+    params: [record_uid, confidence, risk]
+  recommend_adopt:
+    params: [record_uid, size]
+  tryon_render:
+    params: [device_tier, fps, duration_ms]
+  custom_entry_click:
+    params: [source_page]
+  feedback_submit:
+    params: [overall_fit, returned]

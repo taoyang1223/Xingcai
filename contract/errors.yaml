@@ -1,0 +1,17 @@
+# 错误码字典。前两位对齐 HTTP 状态，后三位为业务序号。
+# 客户端禁止硬编码文案，以本文件与接口返回为准。
+
+version: 1
+codes:
+  0: { http: 200, message: ok }
+  40001: { http: 400, message: 参数错误 }
+  40101: { http: 401, message: 未登录或 Token 失效 }
+  40301: { http: 403, message: 尚未取得人体数据处理同意 }
+  40302: { http: 403, message: 权限不足 }
+  40401: { http: 404, message: 资源不存在 }
+  40901: { http: 409, message: 幂等冲突或重复提交 }
+  42901: { http: 429, message: 触发限流 }
+  50001: { http: 500, message: 服务内部错误 }
+  50002: { http: 501, message: 骨架期未实现 }
+  50301: { http: 503, message: 第三方量体服务不可用, degrade: 手动输入建模 }
+  50302: { http: 503, message: 商品解析失败, degrade: 手动录入尺码表 }
