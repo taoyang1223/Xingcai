@@ -1,13 +1,19 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import * as api from "./api";
 import Login from "./Login";
 import PhoneLogin from "./PhoneLogin";
 import Home from "./Home";
+import Capture from "./Capture";
+// 3D 只在进捏人页时才拉，首屏不背这个包
+const Mannequin3D = lazy(() => import("./mannequin/Mannequin3D"));
 
-type Screen = "boot" | "login" | "phone" | "home";
+type Screen = "boot" | "login" | "phone" | "home" | "capture" | "mannequin";
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("boot");
+  // #shape 直接进人台页，方便没有后端时单看这一屏
+  const [screen, setScreen] = useState<Screen>(
+    () => (window.location.hash === "#shape" ? "mannequin" : "boot")
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [nickname, setNickname] = useState("用户");
@@ -17,8 +23,10 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
+  const [captured, setCaptured] = useState(false);
 
   useEffect(() => {
+    if (window.location.hash === "#shape") return;
     const token = api.getToken();
     if (!token) {
       setScreen("login");
@@ -99,8 +107,35 @@ export default function App() {
           toast={toast}
           onTab={setTab}
           onPreview={() => setPreview((v) => !v)}
-          onLogout={() => { api.logout(); setPreview(false); setScreen("login"); }}
+          onLogout={() => { api.logout(); setPreview(false); setCaptured(false); setScreen("login"); }}
           onToast={setToast}
+          captured={captured}
+          onCapture={() => setScreen("capture")}
+          onShape={() => setScreen("mannequin")}
+        />
+      ) : null}
+      {screen === "mannequin" ? (
+        <Suspense fallback={<div className="page muted">人台加载中…</div>}>
+          <Mannequin3D
+            onBack={() => setScreen("home")}
+            onSave={() => {
+              setPreview(true);
+              setTab("home");
+              setScreen("home");
+              setToast("人台已存（弱档，示意）");
+            }}
+          />
+        </Suspense>
+      ) : null}
+      {screen === "capture" ? (
+        <Capture
+          onBack={() => setScreen("home")}
+          onDone={() => {
+            setCaptured(true);
+            setPreview(false);
+            setTab("home");
+            setScreen("home");
+          }}
         />
       ) : null}
     </div>

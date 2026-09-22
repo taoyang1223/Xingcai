@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FitMe · 当期需求图纸</title>
+  <style>
+    :root {
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #d6d3d1;
+      --paper: #f6f1e8;
+      --card: #fffdf8;
+      --teal: #0f766e;
+      --teal-s: #ccfbf1;
+      --now: #f59e0b;
+      --later: #a8a29e;
+      --no: #e11d48;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      font-family: "PingFang SC", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, #fff 0, transparent 28%),
+        repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(15,118,110,.05) 28px),
+        var(--paper);
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 20px 80px; }
+    header { margin-bottom: 28px; }
+    .kicker { color: var(--teal); font-weight: 650; letter-spacing: .12em; font-size: 12px; }
+    h1 { font-size: 36px; margin: 8px 0 6px; letter-spacing: -.03em; }
+    .lead { font-size: 18px; color: var(--muted); max-width: 46em; line-height: 1.6; }
+    h2 {
+      font-size: 15px; margin: 40px 0 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    h2 .n {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--teal); color: #fff;
+      display: grid; place-items: center; font-size: 13px;
+    }
+    .note { font-size: 13px; color: var(--muted); margin: -6px 0 14px; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+    .step {
+      background: var(--card);
+      border: 1.5px solid var(--ink);
+      border-radius: 14px;
+      padding: 14px 12px;
+      min-height: 118px;
+      position: relative;
+      box-shadow: 3px 4px 0 rgba(28,25,23,.08);
+    }
+    .step b { display: block; font-size: 15px; margin-bottom: 6px; }
+    .step p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .step .tag {
+      position: absolute; top: -10px; right: 10px;
+      font-size: 11px; background: var(--now); color: #111;
+      padding: 2px 8px; border-radius: 999px; font-weight: 650;
+    }
+    .step.later { opacity: .72; border-style: dashed; }
+    .step.later .tag { background: var(--later); color: #fff; }
+    .arrow-row {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      margin: 4px 0 0; color: var(--teal); font-size: 20px; text-align: center;
+    }
+    .arrow-row span:last-child { visibility: hidden; }
+
+    .phones {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+    }
+    .phone {
+      background: #111; border-radius: 28px; padding: 12px 10px 16px;
+      color: #e7e5e4; box-shadow: 0 18px 40px rgba(0,0,0,.18);
+    }
+    .phone .notch {
+      width: 88px; height: 8px; background: #292524; border-radius: 99px;
+      margin: 0 auto 10px;
+    }
+    .screen {
+      background: #f7f8f7; color: var(--ink); border-radius: 18px;
+      min-height: 390px; padding: 14px 12px 12px;
+    }
+    .screen h3 { margin: 0 0 10px; font-size: 18px; }
+    .hero-card {
+      background: #ecfdf5; border-radius: 14px; padding: 10px;
+      display: flex; gap: 10px; align-items: center; margin-bottom: 10px;
+    }
+    .hero-card.faded .mn { opacity: .45; }
+    .mn { width: 46px; height: 64px; flex-shrink: 0; }
+    .pill {
+      display: inline-block; background: var(--teal); color: #fff;
+      border-radius: 99px; font-size: 11px; padding: 2px 8px; margin-top: 4px;
+    }
+    .pill.warn { background: #b45309; }
+    .pill.mute { background: #a8a29e; }
+    .fake-input {
+      background: #fff; border-radius: 10px; padding: 8px 10px; font-size: 12px;
+      color: #a8a29e; display: flex; justify-content: space-between; align-items: center;
+      margin: 8px 0; border: 1px solid #e7e5e4;
+    }
+    .fake-input.off { opacity: .45; }
+    .btn {
+      background: var(--teal); color: #fff; border-radius: 10px;
+      text-align: center; padding: 8px; font-size: 13px; font-weight: 650;
+    }
+    .btn.ghost { background: #fff; color: var(--teal); border: 1px dashed var(--teal); }
+    .tabs {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+      margin-top: 12px; font-size: 10px; color: #78716c; text-align: center;
+    }
+    .tabs .on { color: var(--teal); font-weight: 650; }
+    .ph-cap { text-align: center; margin-top: 8px; font-size: 12px; color: #d6d3d1; }
+
+    .layers { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px; }
+    .layer {
+      background: var(--card); border-radius: 16px; padding: 16px;
+      border: 1px solid var(--line);
+    }
+    .layer.main { border: 2px solid var(--teal); background: #f0fdfa; }
+    .layer h3 { margin: 0 0 8px; font-size: 16px; }
+    .layer .when { font-size: 11px; color: var(--teal); font-weight: 650; margin-bottom: 8px; }
+    .layer ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.55; color: var(--muted); }
+
+    .river {
+      display: grid; grid-template-columns: 88px repeat(4, 1fr); gap: 8px;
+    }
+    .phase {
+      background: var(--card); border-radius: 14px; padding: 12px 10px;
+      border: 1px solid var(--line); min-height: 168px;
+    }
+    .phase.now { border: 2px solid var(--now); background: #fffbeb; }
+    .phase h3 { margin: 0 0 6px; font-size: 14px; }
+    .phase ul { margin: 0; padding-left: 16px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .badge {
+      font-size: 10px; font-weight: 700; letter-spacing: .04em;
+      background: var(--now); color: #111; border-radius: 6px;
+      padding: 1px 6px; display: inline-block; margin-bottom: 6px;
+    }
+    .badge.soon { background: var(--teal-s); color: var(--teal); }
+    .badge.far { background: #e7e5e4; color: #57534e; }
+
+    .sys {
+      display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 12px; align-items: start;
+    }
+    .box {
+      background: var(--card); border: 1.5px solid var(--ink); border-radius: 14px; padding: 14px;
+    }
+    .box h3 { margin: 0 0 8px; font-size: 14px; }
+    .box p, .box li { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .box ul { margin: 0; padding-left: 16px; }
+    .mid { display: flex; flex-direction: column; gap: 8px; }
+    .pipe {
+      text-align: center; color: var(--teal); font-size: 12px; font-weight: 650;
+    }
+
+    .cut {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    }
+    .yes, .no {
+      border-radius: 16px; padding: 16px 18px;
+    }
+    .yes { background: #ecfdf5; border: 1px solid #5eead4; }
+    .no { background: #fff1f2; border: 1px solid #fda4af; }
+    .yes h3, .no h3 { margin: 0 0 8px; font-size: 16px; }
+    .yes li { color: #115e59; }
+    .no li { color: #9f1239; }
+    .yes ul, .no ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.6; }
+
+    footer {
+      margin-top: 36px; font-size: 12px; color: var(--muted);
+      border-top: 1px dashed var(--line); padding-top: 14px;
+    }
+    @media (max-width: 900px) {
+      .flow, .arrow-row, .phones, .layers, .river, .sys, .cut {
+        grid-template-columns: 1fr;
+      }
+      .arrow-row { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="kicker">FITME · 图纸 · 不写页面</div>
+      <h1>先看懂这件事，再谈做哪一块</h1>
+      <p class="lead">
+        客户只有一部手机、没有软尺、常常一个人。我们要让他建起体型，然后只回答一句：
+        <b>这件现成衣服，穿哪个码。</b>
+        登录、人台、隐私，都为这句话服务。定制打版现在不做。
+      </p>
+    </header>
+
+    <h2><span class="n">1</span>用户怎么走</h2>
+    <p class="note">实线框是马上要做成的；虚线是以后。箭头从左到右，不要跳步。</p>
+    <div class="flow">
+      <div class="step">
+        <span class="tag">已有壳</span>
+        <b>登录</b>
+        <p>微信 / 支付宝 / 手机号。不采真名、身份证。只知道「是同一个人」。</p>
+      </div>
+      <div class="step">
+        <span class="tag">下一刀</span>
+        <b>弱档</b>
+        <p>身高、体重（可缺）、体型模板。不是准档案。首页写「建议拍照」。</p>
+      </div>
+      <div class="step">
+        <span class="tag">下一刀</span>
+        <b>手填尺码表</b>
+        <p>胸围/肩宽/腰围等填进表。粘贴淘宝链接先写「尚未开通」。</p>
+      </div>
+      <div class="step">
+        <span class="tag">下一刀</span>
+        <b>推荐结果</b>
+        <p>主码 + 备选 + 部位松紧 + 置信度。不敢买时要说「不建议买」。</p>
+      </div>
+      <div class="step later">
+        <span class="tag">以后</span>
+        <b>拍照准档</b>
+        <p>靠墙倒计时拍正侧两张。不填 22 个厘米。再往后才 OCR、3D。</p>
+      </div>
+    </div>
+    <div class="arrow-row"><span>→</span><span>→</span><span>→</span><span>→</span><span>→</span></div>
+
+    <h2><span class="n">2</span>首页长什么样（三态）</h2>
+    <p class="note">不是商城首页。只放人台、一个主操作、最近推荐。胸腰臀三个数不许当「已建档」。</p>
+    <div class="phones">
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <h3>今天适不适合</h3>
+            <div class="hero-card faded">
+              <svg class="mn" viewBox="0 0 80 110" aria-hidden>
+                <g fill="#d1d5db"><circle cx="40" cy="14" r="10"/><rect x="28" y="24" width="24" height="28" rx="10"/><rect x="14" y="28" width="12" height="32" rx="6"/><rect x="54" y="28" width="12" height="32" rx="6"/><rect x="26" y="50" width="12" height="42" rx="6"/><rect x="42" y="50" width="12" height="42" rx="6"/></g>
+              </svg>
+              <div>
+                <b>还没有你的人台</b>
+                <div class="pill mute">空态</div>
+              </div>
+            </div>
+            <div class="btn">拍照建档</div>
+            <div class="btn ghost" style="margin-top:8px">用身高体重先建弱档</div>
+            <div class="fake-input off">粘贴淘宝链接　禁用</div>
+            <div class="tabs"><span class="on">首页</span><span>试穿</span><span>档案</span><span>我的</span></div>
+          </div>
+        </div>
+        <div class="ph-cap">空态 · 主按钮是建档，不是买衣服</div>
+      </div>
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <h3>今天适不适合</h3>
+            <div class="hero-card">
+              <svg class="mn" viewBox="0 0 80 110" aria-hidden>
+                <g fill="#c5b8a8"><circle cx="40" cy="14" r="10"/><rect x="28" y="24" width="24" height="28" rx="10"/><rect x="14" y="28" width="12" height="32" rx="6"/><rect x="54" y="28" width="12" height="32" rx="6"/><rect x="26" y="50" width="12" height="42" rx="6"/><rect x="42" y="50" width="12" height="42" rx="6"/></g>
+              </svg>
+              <div>
+                <b>弱档 · 建议拍照</b>
+                <div class="pill warn">可先看码 · 不准</div>
+              </div>
+            </div>
+            <div class="btn">手填尺码表</div>
+            <div class="btn ghost" style="margin-top:8px">拍照补测（尚未开通）</div>
+            <div class="fake-input off">粘贴淘宝链接　尚未开通</div>
+            <div class="tabs"><span class="on">首页</span><span>试穿</span><span>档案</span><span>我的</span></div>
+          </div>
+        </div>
+        <div class="ph-cap">弱档 · 阶段 1 要做到这里</div>
+      </div>
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <h3>今天适不适合</h3>
+            <div class="hero-card">
+              <svg class="mn" viewBox="0 0 80 110" aria-hidden>
+                <g fill="#c5b8a8"><circle cx="40" cy="14" r="10"/><rect x="28" y="24" width="24" height="28" rx="10"/><rect x="14" y="28" width="12" height="32" rx="6"/><rect x="54" y="28" width="12" height="32" rx="6"/><rect x="26" y="50" width="12" height="42" rx="6"/><rect x="42" y="50" width="12" height="42" rx="6"/></g>
+              </svg>
+              <div>
+                <b>我的人台</b>
+                <div class="pill">18/22 已测 · 推荐可用</div>
+              </div>
+            </div>
+            <div class="fake-input">粘贴淘宝链接　看穿哪个码</div>
+            <div class="btn">推荐尺码</div>
+            <div class="tabs"><span class="on">首页</span><span>试穿</span><span>档案</span><span>我的</span></div>
+          </div>
+        </div>
+        <div class="ph-cap">准档 · 拍照反解之后才有（阶段 2+）</div>
+      </div>
+    </div>
+
+    <h2><span class="n">3</span>体型怎么建（谁填什么）</h2>
+    <div class="layers">
+      <div class="layer main">
+        <div class="when">主路径 · 阶段 2</div>
+        <h3>一部手机拍正侧</h3>
+        <ul>
+          <li>换贴身衣服，手机靠墙，走进人台框</li>
+          <li>倒计时拍正面，转 90° 拍侧面</li>
+          <li>客户只填身高（体重可选）</li>
+          <li>不填胸围腰围，不拍裸体</li>
+        </ul>
+      </div>
+      <div class="layer">
+        <div class="when">先做 · 阶段 1</div>
+        <h3>弱档</h3>
+        <ul>
+          <li>身高体重 + 女/男/中性模板</li>
+          <li>能出低置信推荐</li>
+          <li>不能写成「已测准」</li>
+        </ul>
+      </div>
+      <div class="layer">
+        <div class="when">后做 · 阶段 2 / 4</div>
+        <h3>校正</h3>
+        <ul>
+          <li>拖人台的肚子、肩宽</li>
+          <li>或事后点「这件偏紧/刚好/偏松」</li>
+          <li>厘米手填只藏高级入口</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2><span class="n">4</span>分期：做成什么再往下走</h2>
+    <p class="note">上一阶段没过，不准开下一阶段。现在停在阶段 0 看图；下一刀是阶段 1。</p>
+    <div class="river">
+      <div class="phase now">
+        <div class="badge">现在</div>
+        <h3>0 看懂图</h3>
+        <ul>
+          <li>需求口径</li>
+          <li>不写功能代码</li>
+          <li>你正在看的就是这张图</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="badge soon">下一刀</div>
+        <h3>1 选码内核</h3>
+        <ul>
+          <li>同意后才能写身体数据</li>
+          <li>弱档 + 手填尺码表</li>
+          <li>规则算出推荐码</li>
+          <li>T恤 / 衬衫 / 裤装松量可配</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="badge far">其后</div>
+        <h3>2 拍照建档</h3>
+        <ul>
+          <li>靠墙倒计时</li>
+          <li>自有人台反解</li>
+          <li>原图不进业务库</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="badge far">其后</div>
+        <h3>3 商品进来</h3>
+        <ul>
+          <li>尺码表截图识别</li>
+          <li>人工纠错</li>
+          <li>链接怎么进仍未定</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <div class="badge far">内测</div>
+        <h3>4 敢按推荐买</h3>
+        <ul>
+          <li>松紧热力图</li>
+          <li>简 3D、穿着反馈</li>
+          <li>正式 App 壳</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2><span class="n">5</span>系统积木（人在哪，机器在哪）</h2>
+    <div class="sys">
+      <div class="box">
+        <h3>客户看见</h3>
+        <ul>
+          <li>现在：浏览器里的对照稿</li>
+          <li>以后：Flutter App</li>
+          <li>不采真名、不把头像当核身</li>
+        </ul>
+      </div>
+      <div class="mid">
+        <div class="pipe">↓ 契约 /api/v1 ↓</div>
+        <div class="box">
+          <h3>业务（Go）</h3>
+          <p>账号、同意、身体档案（密文）、商品尺码、规则推荐。模块之间不准互相探表。量体只走 MeasureProvider，禁止业务直接调厂商 SDK。</p>
+        </div>
+        <div class="pipe">↓ 围度字典同一套 key ↓</div>
+        <div class="box">
+          <h3>算法（Python）</h3>
+          <p>阶段 1 几乎不干活（手填）。阶段 2 起：自有人台 \(M(\beta)\) 是档案真相；厂商 SDK 只当可选教师。</p>
+        </div>
+      </div>
+      <div class="box">
+        <h3>运营看见</h3>
+        <ul>
+          <li>改松量规则，推荐跟着变</li>
+          <li>看身体数据要审批</li>
+          <li>阶段 1 后台可以很简陋</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2><span class="n">6</span>下一刀只切这些</h2>
+    <div class="cut">
+      <div class="yes">
+        <h3>做</h3>
+        <ul>
+          <li>弱档（身高体重 + 模板）</li>
+          <li>手填一张尺码表</li>
+          <li>给出推荐码和部位说明</li>
+          <li>写身体数据必须先单独同意</li>
+          <li>三种衣服的松量能改</li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>先不做</h3>
+        <ul>
+          <li>拍照页、相机、3D 试穿</li>
+          <li>粘贴淘宝链接真解析</li>
+          <li>接量体厂商 SDK</li>
+          <li>支付、定制、打版</li>
+          <li>让用户填 22 个厘米数</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer>
+      口径正文：<code>docs/tech/11-phase0-scope.md</code>。
+      这张图只帮助对齐，不替代评审勾选。已定：自有人台为真相；阶段 1～2 只手填尺码表。
+      人台 / Maya 怎么对接见 <a href="./mannequin-workflow.html">图纸 12 · 人台工作流</a>。
+    </footer>
+  </div>
+</body>
+</html>

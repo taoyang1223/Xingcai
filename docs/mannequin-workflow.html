@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FitMe · 人台工作流</title>
+  <style>
+    :root {
+      --ink: #1c1917; --muted: #57534e; --line: #d6d3d1;
+      --paper: #f6f1e8; --card: #fffdf8; --teal: #0f766e;
+      --now: #f59e0b; --no: #e11d48;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      font-family: "PingFang SC", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, #fff 0, transparent 28%),
+        repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(15,118,110,.05) 28px),
+        var(--paper);
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 20px 80px; }
+    .kicker { color: var(--teal); font-weight: 650; letter-spacing: .12em; font-size: 12px; }
+    h1 { font-size: 34px; margin: 8px 0 8px; letter-spacing: -.03em; }
+    .lead { font-size: 18px; color: var(--muted); max-width: 46em; line-height: 1.6; }
+    h2 { font-size: 15px; margin: 36px 0 12px; display: flex; align-items: center; gap: 10px; }
+    h2 .n {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--teal); color: #fff; display: grid; place-items: center; font-size: 13px;
+    }
+    h2 .n.amber { background: var(--now); color: #111; }
+    h2 .n.no { background: var(--no); }
+    h2 .n.gray { background: #a8a29e; }
+    .note { font-size: 13px; color: var(--muted); margin: -4px 0 14px; }
+    .lane {
+      background: var(--card); border: 2px solid var(--teal); border-radius: 18px;
+      padding: 18px 14px 16px; position: relative;
+    }
+    .lane.user { border-color: var(--now); background: #fffbeb; }
+    .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .flow6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+    .step {
+      background: #fff; border: 1.5px solid var(--ink); border-radius: 14px;
+      padding: 12px 10px; min-height: 148px;
+      box-shadow: 3px 4px 0 rgba(28,25,23,.08);
+    }
+    .step b { display: block; font-size: 15px; margin-bottom: 6px; }
+    .step p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .step .ok { color: var(--teal); font-weight: 650; font-size: 12px; margin-top: 8px; }
+    .step.end { background: #ecfdf5; border-color: var(--teal); }
+    .step.see { background: #fff7ed; border-color: #b45309; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .yes, .no, .later {
+      border-radius: 16px; padding: 16px 18px;
+    }
+    .yes { background: #ecfdf5; border: 1px solid #5eead4; }
+    .no { background: #fff1f2; border: 2px solid var(--no); }
+    .later { background: var(--card); border: 1.5px dashed #a8a29e; }
+    .yes h3, .no h3, .later h3 { margin: 0 0 8px; font-size: 16px; }
+    .no h3 { text-decoration: line-through; text-decoration-thickness: 2px; }
+    .yes li { color: #115e59; }
+    .no li { color: #9f1239; }
+    .later li { color: var(--muted); }
+    .yes ul, .no ul, .later ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.6; }
+    .bar {
+      margin-top: 28px; background: #f0fdfa; border: 2px solid var(--teal);
+      border-radius: 14px; padding: 14px 18px; font-size: 16px; color: #115e59; font-weight: 650;
+    }
+    footer { margin-top: 28px; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; }
+    @media (max-width: 900px) {
+      .flow, .flow6, .two { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="kicker">FITME · 图纸 12 · 手绘工作流</div>
+    <h1>精致人台怎么来：工厂做一次，App 用一万次</h1>
+    <p class="lead">
+      Maya / AI 只在<strong>离线工厂</strong>里干活。用户手机从不调用建模软件，也不把原图喂给大模型雕一具新模。
+      客户看见的是货架上的人台，看不见车间。
+    </p>
+
+    <h2><span class="n">A</span>离线工厂 · 做一具好看的无头人台，全用户共用</h2>
+    <p class="note">精致感来自资产与光照，不是来自引擎。一次，不是每人一次。</p>
+    <div class="lane">
+      <div class="flow">
+        <div class="step">
+          <b>1 美术 / AI</b>
+          <p>Maya 或 Blender 雕模。AI 可辅助出草稿。磨砂无头，不做脸。</p>
+          <div class="ok">一次，不是每人一次</div>
+        </div>
+        <div class="step">
+          <b>2 三个形态</b>
+          <p>BS_Fat 整体胖瘦 · BS_Belly 肚子（侧面关键）· BS_Shoulder 肩宽。</p>
+          <div class="ok">名字写进合同，不许乱改</div>
+        </div>
+        <div class="step">
+          <b>3 导出 GLB</b>
+          <p>glTF 二进制，面数 ≤5k，Draco 压缩目标 ≤2MB，附 manifest.json。</p>
+          <div class="ok">App 只认这个文件</div>
+        </div>
+        <div class="step">
+          <b>4 挂上 CDN</b>
+          <p>进捏人页才下载。Web 与以后 Flutter 共用同一资产。</p>
+          <div class="ok">禁止两端各做一套网格</div>
+        </div>
+        <div class="step end">
+          <b>交付物</b>
+          <p>mannequin_headless_v1.glb + 三 morph + 授权留档 docs/licenses/。</p>
+          <div class="ok">精致感来自这里</div>
+        </div>
+      </div>
+    </div>
+
+    <h2><span class="n amber">B</span>在线 · 每个用户只写一组参数 β</h2>
+    <p class="note">拖一下立刻变。秒级，不是等工厂工单。</p>
+    <div class="lane user">
+      <div class="flow6">
+        <div class="step">
+          <b>1 手机建档</b>
+          <p>阶段 1 拖三根杆。阶段 2 正侧两张 + 身高。贴身、靠墙、倒计时。</p>
+          <div class="ok">不填 22 个厘米</div>
+        </div>
+        <div class="step">
+          <b>2 端侧先拦</b>
+          <p>废片 / 裸露 / 卫衣拦截。糊脸后才考虑上传。须有 consent_id。</p>
+          <div class="ok">原图不进业务库</div>
+        </div>
+        <div class="step">
+          <b>3 反解 β</b>
+          <p>height / fat / belly / shoulder。围度从同一具 M(β) 上量出。</p>
+          <div class="ok">SDK 不当档案真相</div>
+        </div>
+        <div class="step">
+          <b>4 驱动 GLB</b>
+          <p>β → morph 权重，身高走缩放。three.js 可转侧面看肚子。</p>
+          <div class="ok">拖一下立刻变</div>
+        </div>
+        <div class="step">
+          <b>5 看码</b>
+          <p>手填尺码表。主码 + 部位诊断 + 置信度。该拦就拦。</p>
+          <div class="ok">选码才是产品</div>
+        </div>
+        <div class="step see">
+          <b>用户看见</b>
+          <p>「这是我的体型」「这件穿 M」。看不见 Maya，看不见 GPT。</p>
+          <div class="ok">秒级</div>
+        </div>
+      </div>
+    </div>
+
+    <h2><span class="n no">×</span>不要做成主路径　　<span class="n gray" style="margin-left:8px">…</span>以后可选</h2>
+    <div class="two">
+      <div class="no">
+        <h3>每人拍照 → GPT 调 Maya → 雕新模 → 导回 App</h3>
+        <ul>
+          <li>Maya 不是 Web API：要许可、无头机、分钟级、很难扩</li>
+          <li>大模型雕不出可复现的围度，档案对不齐、选码会漂</li>
+          <li>原图进公有模型 = 隐私红线（糊脸、短存、不训练）</li>
+          <li>用户要「拖一下立刻变」，不是等工厂工单</li>
+        </ul>
+      </div>
+      <div class="later">
+        <h3>异步精渲染海报（阶段 4）</h3>
+        <ul>
+          <li>同一组 β 丢给服务端（Maya / UE 离线渲）</li>
+          <li>回传图或短视频，不是每人一具不可比网格</li>
+          <li>排队、分钟级可以；绝不挡选码主路径</li>
+          <li>精致加在同一套数据上，不必换故事</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="bar">一句话：Maya 是工厂，β 是档案，GLB 是货架。客户看见货架上的人，看不见车间。</div>
+    <footer>
+      对应调研：<a href="./tech/12-3d-dcc-pipeline.md">技术文档 12</a>
+      · 全幅图：<a href="./drawings/12-mannequin-workflow.svg">drawings/12-mannequin-workflow.svg</a>
+      · 口径仍以 <a href="./tech/11-phase0-scope.md">文档 11</a> 为准。
+    </footer>
+  </div>
+</body>
+</html>

@@ -10,6 +10,9 @@ type Props = {
   onPreview: () => void;
   onLogout: () => void;
   onToast: (s: string) => void;
+  captured?: boolean;
+  onCapture: () => void;
+  onShape: () => void;
 };
 
 function Tabs({ tab, onTab }: { tab: string; onTab: (t: string) => void }) {
@@ -31,7 +34,7 @@ function Tabs({ tab, onTab }: { tab: string; onTab: (t: string) => void }) {
   );
 }
 
-export default function Home({ nickname, hasProfile, preview, tab, toast, onTab, onPreview, onLogout, onToast }: Props) {
+export default function Home({ nickname, hasProfile, preview, tab, toast, onTab, onPreview, onLogout, onToast, captured, onCapture, onShape }: Props) {
   const ready = hasProfile || preview;
   const nickShort = nickname.replace("用户 ", "") || "7F2A";
 
@@ -67,14 +70,18 @@ export default function Home({ nickname, hasProfile, preview, tab, toast, onTab,
           <div className="avatar">{nickShort.slice(0, 4)}</div>
         </div>
 
-        {ready ? (
+        {ready || captured ? (
           <div className="hero">
             <Mannequin />
             <div>
               <div style={{ fontWeight: 650 }}>我的人台</div>
-              <span className="pill">{preview && !hasProfile ? "界面预览" : "18/22 已测"} · 推荐可用</span>
+              <span className="pill">
+                {captured && !hasProfile && !preview ? "正侧已拍 · 待反解" : preview && !hasProfile ? "界面预览" : "18/22 已测"}
+                {hasProfile || preview ? " · 推荐可用" : ""}
+              </span>
               <div>
-                <button className="linkbtn" onClick={() => onToast("下一批次：对准框拍照补测")}>拍照补测</button>
+                <button className="linkbtn" onClick={onShape}>再捏一下人台</button>
+                <button className="linkbtn" onClick={onCapture}>拍照补测</button>
               </div>
             </div>
           </div>
@@ -84,9 +91,9 @@ export default function Home({ nickname, hasProfile, preview, tab, toast, onTab,
             <div>
               <div style={{ fontWeight: 650 }}>还没有你的人台</div>
               <p className="muted" style={{ margin: "6px 0 10px" }}>一部手机，靠墙拍正侧两张。</p>
-              <button className="btn btn-primary btn-sm" onClick={() => onToast("下一批次：人台框对准拍摄")}>拍照建档</button>
+              <button className="btn btn-primary btn-sm" onClick={onShape}>调成我的样子</button>
               <div>
-                <button className="linkbtn" onClick={() => onToast("弱档将在档案批次接入")}>用身高体重先建弱档</button>
+                <button className="linkbtn" onClick={onCapture}>拍照建档 · 阶段 2</button>
               </div>
             </div>
           </div>

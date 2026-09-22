@@ -1,6 +1,6 @@
 # FitMe 工程说明（骨架）
 
-用户建立带真实尺寸的 3D 人体模型，用来选对现成衣服的尺码、预览穿着效果。产品文档在 [`智能量体试衣/`](./智能量体试衣/README.md)。
+用户建立带真实尺寸的 3D 人体模型，用来选对现成衣服的尺码、预览穿着效果。产品文档在 [`docs/`](./docs/README.md)。
 
 当前批次：**A 仓与工具链**。目标是本机能起全套依赖探测，业务接口先返回 `50002`。
 
@@ -13,7 +13,7 @@ web/                      React 后台空壳
 services/server/          Go 模块化单体
 services/algo/            Python 算法桩（Measure / OCR）
 infra/                    Docker Compose 与镜像
-智能量体试衣/              产品与技术文档
+docs/              产品与技术文档
 ```
 
 ## 本机启动（无 Docker）

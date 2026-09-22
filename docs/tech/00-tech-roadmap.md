@@ -72,7 +72,7 @@
 
 ## 4. 仓库与目录（核心架构的物理形态）
 
-代码不进 Xingcai 小说仓。新产品独立仓 `FitMe/`（与 `/root/Xingcai` 并列）。文档现阶段仍在 Xingcai 的 `智能量体试衣/`，迁仓时整包进入 `FitMe/docs/`。
+代码不进 Xingcai 小说仓。新产品独立仓 `FitMe/`（与 `/root/Xingcai` 并列）。文档现阶段仍在 Xingcai 的 `docs/`，迁仓时整包进入 `FitMe/docs/`。
 
 ```
 FitMe/

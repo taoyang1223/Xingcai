@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#f6f1e8"/>
+  <text x="80" y="70" font-family="Noto Sans CJK SC" font-size="22" fill="#0f766e" font-weight="700">FITME · 图纸 1 / 3</text>
+  <text x="80" y="130" font-family="Noto Sans CJK SC" font-size="48" fill="#1c1917" font-weight="700">用户怎么走</text>
+  <text x="80" y="186" font-family="Noto Sans CJK SC" font-size="26" fill="#57534e">只回答一句：这件现成衣服，穿哪个码。实线马上做，虚线以后再做。</text>
+  <g font-family="Noto Sans CJK SC">
+    <rect x="72" y="280" width="320" height="300" rx="22" fill="#fffdf8" stroke="#1c1917" stroke-width="3"/>
+    <rect x="250" y="258" width="118" height="36" rx="18" fill="#f59e0b"/>
+    <text x="309" y="283" text-anchor="middle" font-size="16" font-weight="700" fill="#111">已有壳</text>
+    <text x="96" y="360" font-size="32" font-weight="700" fill="#1c1917">1  登录</text>
+    <text x="96" y="412" font-size="20" fill="#57534e">微信 / 支付宝 / 手机号</text>
+    <text x="96" y="448" font-size="20" fill="#57534e">不采真名、身份证</text>
+    <text x="96" y="484" font-size="20" fill="#57534e">只知道「是同一个人」</text>
+
+    <rect x="432" y="280" width="320" height="300" rx="22" fill="#fffdf8" stroke="#1c1917" stroke-width="3"/>
+    <rect x="610" y="258" width="118" height="36" rx="18" fill="#0f766e"/>
+    <text x="669" y="283" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">下一刀</text>
+    <text x="456" y="360" font-size="32" font-weight="700" fill="#1c1917">2  弱档</text>
+    <text x="456" y="412" font-size="20" fill="#57534e">身高、体重（可缺）</text>
+    <text x="456" y="448" font-size="20" fill="#57534e">体型模板：女 / 男 / 中性</text>
+    <text x="456" y="484" font-size="20" fill="#57534e">首页写「建议拍照」</text>
+    <text x="456" y="520" font-size="20" fill="#b45309">不是准档案</text>
+
+    <rect x="792" y="280" width="320" height="300" rx="22" fill="#fffdf8" stroke="#1c1917" stroke-width="3"/>
+    <rect x="970" y="258" width="118" height="36" rx="18" fill="#0f766e"/>
+    <text x="1029" y="283" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">下一刀</text>
+    <text x="816" y="360" font-size="30" font-weight="700" fill="#1c1917">3  手填尺码表</text>
+    <text x="816" y="412" font-size="20" fill="#57534e">把衣服的胸围肩宽等填进表</text>
+    <text x="816" y="448" font-size="20" fill="#57534e">淘宝链接先写「尚未开通」</text>
+    <text x="816" y="484" font-size="20" fill="#57534e">手填这条路永不下线</text>
+
+    <rect x="1152" y="280" width="320" height="300" rx="22" fill="#fffdf8" stroke="#1c1917" stroke-width="3"/>
+    <rect x="1330" y="258" width="118" height="36" rx="18" fill="#0f766e"/>
+    <text x="1389" y="283" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">下一刀</text>
+    <text x="1176" y="360" font-size="32" font-weight="700" fill="#1c1917">4  推荐结果</text>
+    <text x="1176" y="412" font-size="20" fill="#57534e">主码 + 备选</text>
+    <text x="1176" y="448" font-size="20" fill="#57534e">部位松紧 + 置信度</text>
+    <text x="1176" y="484" font-size="20" fill="#57534e">该拦就写「不建议买」</text>
+
+    <rect x="1512" y="280" width="336" height="300" rx="22" fill="#fffdf8" stroke="#a8a29e" stroke-width="3" stroke-dasharray="10 8"/>
+    <rect x="1706" y="258" width="118" height="36" rx="18" fill="#a8a29e"/>
+    <text x="1765" y="283" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">以后</text>
+    <text x="1536" y="360" font-size="32" font-weight="700" fill="#78716c">5  拍照准档</text>
+    <text x="1536" y="412" font-size="20" fill="#78716c">靠墙倒计时拍正侧两张</text>
+    <text x="1536" y="448" font-size="20" fill="#78716c">不填 22 个厘米数</text>
+    <text x="1536" y="484" font-size="20" fill="#78716c">再往后才 OCR、3D</text>
+  </g>
+  <g fill="#0f766e" font-size="42" font-family="Noto Sans CJK SC" text-anchor="middle">
+    <text x="408" y="440">→</text>
+    <text x="768" y="440">→</text>
+    <text x="1128" y="440">→</text>
+    <text x="1488" y="440">→</text>
+  </g>
+  <rect x="72" y="660" width="1776" height="320" rx="24" fill="#fffdf8" stroke="#d6d3d1" stroke-width="2"/>
+  <text x="108" y="720" font-family="Noto Sans CJK SC" font-size="28" font-weight="700" fill="#1c1917">已经钉死、可以当事实</text>
+  <text x="108" y="776" font-family="Noto Sans CJK SC" font-size="22" fill="#44403c">· 档案以自有人台为准，不先买量体 SDK</text>
+  <text x="108" y="822" font-family="Noto Sans CJK SC" font-size="22" fill="#44403c">· 阶段 1～2 只手填尺码表，不解析淘宝链接</text>
+  <text x="108" y="868" font-family="Noto Sans CJK SC" font-size="22" fill="#44403c">· 不采真名、身份证；隐私和功能冲突时，停功能</text>
+  <text x="108" y="914" font-family="Noto Sans CJK SC" font-size="22" fill="#44403c">· 现在不要做：拍照页、3D、支付、定制打版</text>
+  <text x="80" y="1038" font-family="Noto Sans CJK SC" font-size="18" fill="#a8a29e">下一张：首页空态 / 弱档 / 准档 分别长什么样</text>
+</svg>
