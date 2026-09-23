@@ -40,7 +40,7 @@
 | [10 C 端信息架构与自有人体模型](./tech/10-ia-body-model.md) | 首页/档案、单机拍照建档、着装与腹型、隐私短删、自有 \(M(\beta)\) | 产品、设计、算法、客户端 |
 | [11 阶段 0 当期需求口径（评审稿）](./tech/11-phase0-scope.md) | **当期做什么、三态、同意、分期、未决勾选**；通过前不当作已锁 | 全体；评审第一篇 |
 | [12 App 三维展示与 DCC 资产对接调研](./tech/12-3d-dcc-pipeline.md) | glTF 标准、开源栈、文献、Maya/Blender→GLB、`Beta`↔morph 合同 | 客户端、美术、算法 |
-| [13 Maya 人台落地到 App](./tech/13-maya-glb-implementation.md) | **怎么实现**：导出合同、替换哪个文件、权重公式、验收 | 客户端、美术、测试 |
+| [13 Maya 人台落地到 App](./tech/13-maya-glb-implementation.md) | **工作流与实现**：Maya 在开发者电脑做一次 GLB，服务器只收文件；导出合同、权重、验收 | 客户端、美术、测试 |
 | [图纸 · 当期需求](./drawings-current.html) | 主流程 / 首页三态 / 分期（HTML 长页） | 产品、设计、决策 |
 | [图纸 PNG](./drawings/) | 十二张预览图：①～⑪ 在 `drawings/`；⑫ [人台工作流](./drawings/12-mannequin-workflow.png) | 直接打开看 |
 | [图纸 · 人台工作流](./mannequin-workflow.html) | 手绘长页：离线工厂 → 在线 β → 禁止路径 / 阶段 4 精渲染 | 产品、客户端、美术 |
