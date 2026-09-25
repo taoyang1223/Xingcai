@@ -22,8 +22,7 @@ npm run dev
 # http://127.0.0.1:5174/#shape   ← 直接进这一屏，不需要后端
 ```
 
-- `body.ts`：参数化人台。截面轮廓 → 保形三次样条 → 超椭圆网格；围度从同一条轮廓数值积分得出，与网格必然自洽。
-- `Mannequin3D.tsx`：three.js 场景、滑杆、视角切换。滑杆只改顶点位置，不重建拓扑。
-- **网格是算出来的，不引用任何第三方人体模型**，因此没有 SMPL 之类的商用授权问题。
+- 客户看到的人改以 `docs/tech/14-display-character.md` 为准：对标 Snow 的完成度，通用头在 `public/mannequin/heads/snow_head_v1.glb`。
+- `body.ts` 和页面上的程序化人台是旧占位，围度公式还在这里，不再当展示标准。
+- `Mannequin3D.tsx`：three.js 场景、滑杆、视角切换。
 - three.js 走懒加载：首屏不含 3D，进这一屏才拉。
-- 无头人台，不做脸——见 `docs/tech/11` 第 8.4 / 8.7 节。

@@ -1,0 +1,11 @@
+Snow 头部样式
+
+来源：Blender Studio 角色 Snow，文件 snow_v4.2.blend。
+只取头部相关网格，作为 FitMe 人人相同的通用头样式之一。
+不从用户照片生成，不做人脸识别。
+
+许可：CC BY 4.0
+https://creativecommons.org/licenses/by/4.0/
+
+署名：Snow Rig (CC) Blender Foundation | studio.blender.org
+页面：https://studio.blender.org/characters/snow/v4/

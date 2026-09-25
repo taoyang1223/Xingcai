@@ -6,7 +6,9 @@ import {
   DEFAULT_BETA,
   RADIAL,
   armAt,
+  armSpread,
   legAt,
+  legSpread,
   measure,
   superEllipse,
   torsoAt,
@@ -25,22 +27,25 @@ type PartSpec = {
   to: number;
   n: number;
   at: (beta: Beta, h: number) => { a: number; b: number };
-  offset: (beta: Beta) => number;
+  offset: (beta: Beta, h: number) => number;
   side: 1 | -1 | 0;
+  capBottom: boolean;
+  capTop: boolean;
   /** 向前偏移，单位为身高占比。手臂略靠前，侧面才看得见腰腹轮廓 */
   forward?: number;
 };
 
 const PARTS: PartSpec[] = [
-  { rings: 84, from: 0.468, to: 1.0, n: 2.45, at: torsoAt, offset: () => 0, side: 0 },
-  { rings: 44, from: 0.012, to: 0.508, n: 2.15, at: legAt, offset: (b) => torsoAt(b, 0.5).a * 0.4, side: -1 },
-  { rings: 44, from: 0.012, to: 0.508, n: 2.15, at: legAt, offset: (b) => torsoAt(b, 0.5).a * 0.4, side: 1 },
-  { rings: 40, from: 0.398, to: 0.814, n: 2.1, at: armAt, offset: (b) => torsoAt(b, 0.8).a + 0.012, side: -1, forward: 0.012 },
-  { rings: 40, from: 0.398, to: 0.814, n: 2.1, at: armAt, offset: (b) => torsoAt(b, 0.8).a + 0.012, side: 1, forward: 0.012 },
+  { rings: 84, from: 0.468, to: 1.0, n: 2.45, at: torsoAt, offset: () => 0, side: 0, capBottom: false, capTop: true },
+  { rings: 44, from: 0.012, to: 0.58, n: 2.15, at: legAt, offset: legSpread, side: -1, capBottom: true, capTop: false },
+  { rings: 44, from: 0.012, to: 0.58, n: 2.15, at: legAt, offset: legSpread, side: 1, capBottom: true, capTop: false },
+  { rings: 40, from: 0.398, to: 0.845, n: 2.1, at: armAt, offset: armSpread, side: -1, forward: 0.012, capBottom: true, capTop: false },
+  { rings: 40, from: 0.398, to: 0.845, n: 2.1, at: armAt, offset: armSpread, side: 1, forward: 0.012, capBottom: true, capTop: false },
 ];
 
-function buildGeometry(rings: number, radial: number) {
-  const count = rings * radial + 2;
+function buildGeometry(spec: PartSpec, radial: number) {
+  const rings = spec.rings;
+  const count = rings * radial + (spec.capBottom ? 1 : 0) + (spec.capTop ? 1 : 0);
   const positions = new Float32Array(count * 3);
   const index: number[] = [];
   for (let i = 0; i < rings - 1; i++) {
@@ -53,12 +58,14 @@ function buildGeometry(rings: number, radial: number) {
       index.push(a, b, c, a, c, d);
     }
   }
-  const bottom = rings * radial;
-  const top = rings * radial + 1;
+  let cap = rings * radial;
   for (let j = 0; j < radial; j++) {
     const j2 = (j + 1) % radial;
-    index.push(bottom, j2, j);
-    index.push(top, (rings - 1) * radial + j, (rings - 1) * radial + j2);
+    if (spec.capBottom) index.push(cap, j2, j);
+    if (spec.capTop) {
+      const top = cap + (spec.capBottom ? 1 : 0);
+      index.push(top, (rings - 1) * radial + j, (rings - 1) * radial + j2);
+    }
   }
   const geom = new THREE.BufferGeometry();
   geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
@@ -70,12 +77,12 @@ function writePositions(geom: THREE.BufferGeometry, spec: PartSpec, beta: Beta) 
   const attr = geom.getAttribute("position") as THREE.BufferAttribute;
   const arr = attr.array as Float32Array;
   const hm = beta.heightCm / 100;
-  const dx = spec.offset(beta) * spec.side * hm;
   const dz = (spec.forward ?? 0) * hm;
   let p = 0;
   for (let i = 0; i < spec.rings; i++) {
     const h = spec.from + ((spec.to - spec.from) * i) / (spec.rings - 1);
     const { a, b } = spec.at(beta, h);
+    const dx = spec.offset(beta, h) * spec.side * hm;
     for (let j = 0; j < RADIAL; j++) {
       const th = (j / RADIAL) * Math.PI * 2;
       const e = superEllipse(a, b, th, spec.n);
@@ -84,14 +91,20 @@ function writePositions(geom: THREE.BufferGeometry, spec: PartSpec, beta: Beta) 
       arr[p++] = e.z * hm + dz;
     }
   }
-  const capLow = spec.at(beta, spec.from);
-  arr[p++] = dx;
-  arr[p++] = spec.from * hm + capLow.b * hm * 0.1;
-  arr[p++] = dz;
-  const capTop = spec.at(beta, spec.to);
-  arr[p++] = dx;
-  arr[p++] = spec.to * hm + capTop.b * hm * 0.45;
-  arr[p++] = dz;
+  if (spec.capBottom) {
+    const capLow = spec.at(beta, spec.from);
+    const dx = spec.offset(beta, spec.from) * spec.side * hm;
+    arr[p++] = dx;
+    arr[p++] = spec.from * hm + capLow.b * hm * 0.1;
+    arr[p++] = dz;
+  }
+  if (spec.capTop) {
+    const capTop = spec.at(beta, spec.to);
+    const dx = spec.offset(beta, spec.to) * spec.side * hm;
+    arr[p++] = dx;
+    arr[p++] = spec.to * hm + capTop.b * hm * 0.45;
+    arr[p++] = dz;
+  }
   attr.needsUpdate = true;
   geom.computeVertexNormals();
   geom.computeBoundingSphere();
@@ -257,7 +270,7 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
     if (!group || !material) return;
     clearVisual();
     meshesRef.current = PARTS.map((spec) => {
-      const geom = buildGeometry(spec.rings, RADIAL);
+      const geom = buildGeometry(spec, RADIAL);
       writePositions(geom, spec, betaNow);
       const mesh = new THREE.Mesh(geom, material);
       mesh.castShadow = true;

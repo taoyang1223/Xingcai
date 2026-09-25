@@ -13,6 +13,7 @@ import {
   armAt,
   armSpread,
   legAt,
+  legSpread,
   superEllipse,
   torsoAt,
 } from "../src/mannequin/body.ts";
@@ -29,10 +30,10 @@ const TORSO_FROM = 0.468;
 const TORSO_TO = 0.855;
 const TORSO_RINGS = 24;
 const LEG_FROM = 0.012;
-const LEG_TO = 0.505;
+const LEG_TO = 0.58;
 const LEG_RINGS = 16;
 const ARM_FROM = 0.398;
-const ARM_TO = 0.814;
+const ARM_TO = 0.845;
 const ARM_RINGS = 14;
 
 type PartKind = "torso" | "leg" | "arm";
@@ -45,6 +46,9 @@ type Part = {
   n: number;
   side: -1 | 0 | 1;
   forward: number;
+  /** 接进躯干的那一端不要盖，否则会鼓出一颗球 */
+  capBottom: boolean;
+  capTop: boolean;
   at: (b: Beta, h: number) => { a: number; b: number; cz: number };
   offsetX: (b: Beta, h: number) => number;
 };
@@ -60,6 +64,8 @@ const PARTS: Part[] = [
     forward: 0,
     at: (b, h) => torsoAt(b, h),
     offsetX: () => 0,
+    capBottom: false,
+    capTop: true,
   },
   {
     kind: "leg",
@@ -70,7 +76,9 @@ const PARTS: Part[] = [
     side: -1,
     forward: 0,
     at: (b, h) => legAt(b, h),
-    offsetX: (b, h) => torsoAt(b, 0.5).a * 0.4,
+    offsetX: (b, h) => legSpread(b, h),
+    capBottom: true,
+    capTop: false,
   },
   {
     kind: "leg",
@@ -81,7 +89,9 @@ const PARTS: Part[] = [
     side: 1,
     forward: 0,
     at: (b, h) => legAt(b, h),
-    offsetX: (b, h) => torsoAt(b, 0.5).a * 0.4,
+    offsetX: (b, h) => legSpread(b, h),
+    capBottom: true,
+    capTop: false,
   },
   {
     kind: "arm",
@@ -93,6 +103,8 @@ const PARTS: Part[] = [
     forward: 0.012,
     at: (b, h) => armAt(b, h),
     offsetX: (b, h) => armSpread(b, h),
+    capBottom: true,
+    capTop: false,
   },
   {
     kind: "arm",
@@ -104,6 +116,8 @@ const PARTS: Part[] = [
     forward: 0.012,
     at: (b, h) => armAt(b, h),
     offsetX: (b, h) => armSpread(b, h),
+    capBottom: true,
+    capTop: false,
   },
 ];
 
@@ -136,8 +150,8 @@ function buildPositions(beta: Beta): Float32Array {
     const dx0 = part.offsetX(beta, h0) * part.side * hm;
     const dx1 = part.offsetX(beta, h1) * part.side * hm;
     const dz = part.forward * hm;
-    coords.push(dx0, h0 * hm - s0.b * hm * 0.12, dz + s0.cz * hm);
-    coords.push(dx1, h1 * hm + s1.b * hm * 0.2, dz + s1.cz * hm);
+    if (part.capBottom) coords.push(dx0, h0 * hm - s0.b * hm * 0.12, dz + s0.cz * hm);
+    if (part.capTop) coords.push(dx1, h1 * hm + s1.b * hm * 0.2, dz + s1.cz * hm);
   }
 
   return new Float32Array(coords);
@@ -158,14 +172,20 @@ function buildIndex(): Uint32Array {
         idx.push(a, b, c, a, c, d);
       }
     }
-    const bottom = ringStart + part.rings * RADIAL;
-    const top = bottom + 1;
+    let capCursor = ringStart + part.rings * RADIAL;
     for (let j = 0; j < RADIAL; j++) {
       const j2 = (j + 1) % RADIAL;
-      idx.push(bottom, ringStart + j2, ringStart + j);
-      idx.push(top, ringStart + (part.rings - 1) * RADIAL + j, ringStart + (part.rings - 1) * RADIAL + j2);
+      if (part.capBottom) {
+        idx.push(capCursor, ringStart + j2, ringStart + j);
+      }
+      if (part.capTop) {
+        const top = capCursor + (part.capBottom ? 1 : 0);
+        idx.push(top, ringStart + (part.rings - 1) * RADIAL + j, ringStart + (part.rings - 1) * RADIAL + j2);
+      }
     }
-    cursor = top + 1;
+    if (part.capBottom) capCursor++;
+    if (part.capTop) capCursor++;
+    cursor = capCursor;
   }
   return new Uint32Array(idx);
 }

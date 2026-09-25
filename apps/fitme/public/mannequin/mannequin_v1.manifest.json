@@ -1,6 +1,6 @@
 {
   "assetId": "mannequin_headless_v1",
-  "glbUrl": "/mannequin/mannequin_headless_v1.glb?v=3",
+  "glbUrl": "/mannequin/mannequin_headless_v1.glb?v=5",
   "format": "glb",
   "units": "meters",
   "upAxis": "Y",
@@ -14,5 +14,5 @@
     "shoulder": "BS_Shoulder"
   },
   "licenseRef": "docs/licenses/mannequin_v1.txt",
-  "notes": "body.ts 同源烘焙；基准=DEFAULT_BETA；morph=单轴拉满差值；无头颈根收口"
+  "notes": "body.ts 同源烘焙；肩更宽、腰更收、大腿小腿有起伏；基准=DEFAULT_BETA；无头颈根收口"
 }

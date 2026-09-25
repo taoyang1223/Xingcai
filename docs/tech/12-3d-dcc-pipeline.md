@@ -1,7 +1,7 @@
 # 12 · App 三维展示与 DCC 资产对接调研
 
 > 读者：产品、客户端、算法、美术/外包  
-> 状态：调研备忘（2026-09-22）—— **不定排期**，不定推翻《11》8.7 的 three.js / B 档结论  
+> 状态：调研备忘（2026-09-22）。客户看到的人改以《14》为准，不再维持磨砂无头人台。
 > 目的：把「App 怎么展示 3D」「怎么对接 Maya 等建模软件」收成可检索的一页：标准、开源、文献、与我们 `Beta` 的对齐  
 > 上游：《11》8.7～8.7.3、《10》人体模型、《04》算法；代码真源：`apps/fitme/src/mannequin/body.ts`
 
@@ -34,7 +34,7 @@ DCC（Maya / Blender / …）
 
 Zalando 等公开材料里，B 谈得多、A 的引擎细节几乎不公开；**不要从「虚拟试衣宣传」反推必须用 Unity**。
 
-与《11》对齐：阶段 1 = L2 实时网格 + B 档磨砂无头；Unity/UE 属 C 档上限，阶段 4 再议。
+与《11》对齐：阶段 1 仍是 three.js 实时网格。2026-09-24 起，客户看到的人改为风格化完成体（清楚轮廓、光滑表面、衣服可分开、固定的抽象头）。通用头样式之一是 Snow 的头：`apps/fitme/public/mannequin/heads/snow_head_v1.glb`，人人相同，许可与署名见 `docs/licenses/snow-head.txt`。围度仍只从 \(\beta\) 计算。Unity/UE 不因此提前。Snow 的身体和衣服不入库。
 
 ---
 
@@ -46,7 +46,7 @@ Zalando 等公开材料里，B 谈得多、A 的引擎细节几乎不公开；**
 | --- | --- | --- |
 | **Khronos glTF 2.0** | https://github.com/KhronosGroup/glTF | **唯一推荐交付格式**；含 mesh、PBR、morph、动画 |
 | glTF Sample Models | https://github.com/KhronosGroup/glTF-Sample-Models | 验收加载器、看 morph 样例 |
-| glTF-Transform（压缩/批处理） | https://github.com/donmccurdy/glTF-Transform | CI 里压 Draco/网格；对齐《11》包体积 ≤ 2 MB |
+| glTF-Transform（压缩/批处理） | https://github.com/donmccurdy/glTF-Transform | CI 里可压 Draco/网格；展示 GLB 目标 ≤ 8 MB |
 
 术语对照（必须写进外包合同）：
 
@@ -72,7 +72,7 @@ Zalando 等公开材料里，B 谈得多、A 的引擎细节几乎不公开；**
 
 ### 2.3 建议交付物清单（给美术/外包）
 
-1. `mannequin_vN.glb`（无头、≤ 5k 三角面、Draco 可选）  
+1. `mannequin_vN.glb`（风格化完成体：可有抽象头和分开的衣服；三角面 ≤ 25000；文件 ≤ 8 MB；不强制 Draco。不放用户的脸）  
 2. `mannequin_vN.manifest.json`（见第 4 节 schema）  
 3. 授权证明 → 仓内 `docs/licenses/`（或本目录旁 `licenses/`，与《11》8.7 一致）  
 4. 三视图 PNG（标准体 / 拉满肚子 / 拉满肩）便于产品评审  
@@ -154,8 +154,8 @@ morph 拉满 = 滑杆 = 1 时的视觉上限；**不得**用负权重表达「�
   "format": "glb",
   "units": "meters",
   "upAxis": "Y",
-  "headless": true,
-  "triangleCountMax": 5000,
+  "headless": false,
+  "triangleCountMax": 25000,
   "baseHeightCm": 170,
   "heightMode": "uniformScale",
   "morphs": {
@@ -164,7 +164,7 @@ morph 拉满 = 滑杆 = 1 时的视觉上限；**不得**用负权重表达「�
     "shoulder": "BS_Shoulder"
   },
   "licenseRef": "docs/licenses/mannequin_v1.txt",
-  "notes": "无脸；磨砂皮肤；T 或 A-pose 写清"
+  "notes": "通用头；皮肤与衣服分开；站姿写清。完成度见《14》"
 }
 ```
 
@@ -173,21 +173,17 @@ morph 拉满 = 滑杆 = 1 时的视觉上限；**不得**用负权重表达「�
 | 职责 | 谁做 | 说明 |
 | --- | --- | --- |
 | 档案真相 | \(M(\beta)\) / 围度字段 | 《11》8.1A；SDK 不当真相 |
-| 屏幕网格 | GLB + morph **或** 现程序化网格 | 可并行对照一个版本 |
+| 屏幕网格 | 按《14》做的 GLB | 程序化胶囊不再作为交付 |
 | 胸腰臀读数 | `measure(beta)` 或预烘焙表 | **不得**只从屏幕像素估 |
 | 照片反解 | 只改 \(\beta\) 来源 | 不改 morph 名、不改字段字典 |
 
 切换美术资产时的验收：**同一 \(\beta\)，视觉肚子/肩与 `measure` 读数不矛盾**（允许小偏差，不许「数字 81、看起来像 90」无说明）。
 
-### 4.4 程序化人台 → GLB 的过渡
+### 4.4 旧程序化网格
 
-| 阶段 | 显示 | 围度 |
-| --- | --- | --- |
-| 现在 | `Mannequin3D` 程序化截面 | `measure(beta)` 同源 |
-| 接 GLB 后 | 优先 GLB；程序化可留「调试开关」 | 仍 `measure`；或美术提供校准表 |
-| 资产未就绪 | 禁止阻塞选码内核 | 《11》：3D 超期先砍显示保推荐 |
+`Mannequin3D` 里的截面人台和 `mannequin_headless_v1.glb` 是旧占位。围度公式可以留在 `measure(beta)`。客户看到的人按《14》替换，不在这具胶囊上继续雕。
 
-**已落地骨架（2026-09-22）**
+**已落地、但属于旧管子（2026-09-22）**
 
 | 路径 | 作用 |
 | --- | --- |
@@ -219,11 +215,11 @@ morph 拉满 = 滑杆 = 1 时的视觉上限；**不得**用负权重表达「�
 
 ## 6. 推荐给我们的落地顺序（调研结论）
 
-1. **保持** Web three.js L2 + 现有 \(\beta\)（已跑通 demo）。  
-2. **并行** 用 Blender（或 Maya→GLB）做一版无头磨砂人台 + 三个 morph，按第 4 节命名。  
-3. **`Mannequin3D` 增加 GLB 加载路径**（feature flag），与程序化对照。  
-4. 真机测帧率与包体（《11》未完成项）。  
-5. 阶段 2 照片反解只写入同一 `Beta`；勿为「更真实」提前上 Unity。  
+1. **保持** Web three.js 与现有 \(\beta\)。  
+2. **按《14》** 在 Blender 里做展示角色：通用头、分开的衣服、三个 morph。对标 Snow 的完成度，不把 Snow 整具入库。  
+3. 用这份 GLB 换掉程序化占位。  
+4. 真机测帧率与包体。  
+5. 阶段 2 照片反解只写入同一 `Beta`。不要为了更像真人去重建用户的脸，也不要为此改上 Unity。  
 
 手绘全图：[`drawings/12-mannequin-workflow.png`](../drawings/12-mannequin-workflow.png) · [`mannequin-workflow.html`](../mannequin-workflow.html)
 

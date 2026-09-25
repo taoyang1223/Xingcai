@@ -16,7 +16,10 @@ ifneq (,$(wildcard $(ROOT)/.env))
   export
 endif
 
-.PHONY: help bootstrap up down dev stop-dev lint test migrate gen-proto gen-api algo-venv
+.PHONY: help bootstrap up down dev stop-dev lint test migrate gen-proto gen-api algo-venv check-mannequin export-mannequin
+
+BLENDER ?= /Applications/Blender.app/Contents/MacOS/Blender
+MANNEQUIN_GLB := $(ROOT)/apps/fitme/public/mannequin/mannequin_headless_v1.glb
 
 help:
 	@echo "make bootstrap  建库 + Python venv + Go 依赖"
@@ -25,6 +28,8 @@ help:
 	@echo "make down       docker compose down"
 	@echo "make migrate    执行数据库迁移"
 	@echo "make lint / test / gen-proto / gen-api"
+	@echo "make check-mannequin                 用 Blender 核对现有 GLB 的三个形态"
+	@echo "make export-mannequin INPUT=人台.blend  按合同导出并覆盖占位 GLB"
 
 bootstrap: algo-venv
 	@test -f $(ROOT)/.env || cp $(ROOT)/.env.example $(ROOT)/.env
@@ -89,3 +94,15 @@ gen-proto:
 
 gen-api:
 	@echo "骨架期：以 contract/openapi.yaml 为真源。接入 oapi-codegen / openapi-typescript 后再生成各端 DTO。"
+
+check-mannequin:
+	@test -x "$(BLENDER)" || (echo "未找到 Blender: $(BLENDER)"; exit 1)
+	"$(BLENDER)" --background --python $(ROOT)/tools/blender/export_mannequin.py -- \
+		--input "$(MANNEQUIN_GLB)" --check
+
+export-mannequin:
+	@test -x "$(BLENDER)" || (echo "未找到 Blender: $(BLENDER)"; exit 1)
+	@test -n "$(INPUT)" || (echo "用法: make export-mannequin INPUT=人台.blend"; exit 1)
+	"$(BLENDER)" --background --python $(ROOT)/tools/blender/export_mannequin.py -- \
+		--input "$(INPUT)" --output "$(MANNEQUIN_GLB)"
+	@echo "已覆盖 $(MANNEQUIN_GLB)。请把 manifest.ts 与 mannequin_v1.manifest.json 的 ?v= 加一。"

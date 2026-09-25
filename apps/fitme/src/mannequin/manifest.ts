@@ -12,7 +12,8 @@ export type MannequinManifest = {
   format: "glb";
   units: "meters";
   upAxis: "Y";
-  headless: true;
+  /** 当前占位仍是无头。下一版展示可以带固定抽象头。 */
+  headless: boolean;
   triangleCountMax: number;
   /** 基准网格对应的身高（cm），用于 heightCm → scale */
   baseHeightCm: number;
@@ -29,12 +30,12 @@ export type MannequinManifest = {
 /** 阶段 1 占位资产：程序生成的无头胶囊人台 + 三 morph */
 export const PLACEHOLDER_MANIFEST: MannequinManifest = {
   assetId: "mannequin_headless_v1",
-  glbUrl: "/mannequin/mannequin_headless_v1.glb?v=3",
+  glbUrl: "/mannequin/mannequin_headless_v1.glb?v=5",
   format: "glb",
   units: "meters",
   upAxis: "Y",
   headless: true,
-  triangleCountMax: 5000,
+  triangleCountMax: 25000,
   baseHeightCm: 170,
   heightMode: "uniformScale",
   morphs: {
@@ -43,7 +44,7 @@ export const PLACEHOLDER_MANIFEST: MannequinManifest = {
     shoulder: "BS_Shoulder",
   },
   licenseRef: "docs/licenses/mannequin_v1.txt",
-  notes: "body.ts 同源烘焙；基准 DEFAULT_BETA；morph 为单轴拉满差值；≤5k 面",
+  notes: "当前文件仍是无头占位。展示目标改为风格化完成体：抽象头、衣服可分开、三角面 ≤25000。围度仍来自 measure(β)。",
 };
 
 export type AssetMode = "procedural" | "glb";
