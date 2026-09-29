@@ -257,22 +257,29 @@ def svg(pattern):
     height = math.ceil(max(1350, max(dy + max(p[1] for p in piece["cutline_mm"]) + 30 for piece, dx, dy in layout)))
     parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}mm" height="{height}mm" viewBox="0 0 {width} {height}">',
              '<title>synthetic loose tee geometry prototype — NOT FOR CUTTING</title>',
-             '<g fill="none" stroke-linejoin="round">']
+             '<rect width="100%" height="100%" fill="#ffffff"/>',
+             '<style>',
+             '.cutline { stroke: #e10600; stroke-width: 2.5; vector-effect: non-scaling-stroke; }',
+             '.seamline { stroke: #111111; stroke-width: 2; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }',
+             '.grainline { stroke: #0b6bff; stroke-width: 2.5; vector-effect: non-scaling-stroke; }',
+             'text { fill: #111111; font-family: sans-serif; }',
+             '</style>',
+             '<g fill="none" stroke-linejoin="round" stroke-linecap="round">']
     for piece, dx, dy in layout:
         name = escape(piece["id"])
         parts.extend([f'<g transform="translate({dx:.5f} {dy:.5f})" id="{name}">',
-                      f'<polygon class="cutline" points="{_coords(piece["cutline_mm"])}" stroke="#bb3333" stroke-width="0.35"/>',
-                      f'<polygon class="seamline" points="{_coords(piece["seamline_mm"])}" stroke="#222222" stroke-width="0.35" stroke-dasharray="3 2"/>'])
+                      f'<polygon class="cutline" points="{_coords(piece["cutline_mm"])}"/>',
+                      f'<polygon class="seamline" points="{_coords(piece["seamline_mm"])}"/>'])
         for i, edge in enumerate(piece["edges"]):
             if edge["join"] is not None:
                 a, b = piece["seamline_mm"][i], piece["seamline_mm"][(i + 1) % len(piece["edges"])]
                 parts.append(f'<line data-join="{edge["join"]}" data-side="{edge["side"]}" data-allowance-mm="{edge["allowance_mm"]}" x1="{a[0]:.5f}" y1="{a[1]:.5f}" x2="{b[0]:.5f}" y2="{b[1]:.5f}" stroke="none"/>')
         a, b = piece["grainline_mm"]
-        parts.extend([f'<line class="grainline" x1="{a[0]}" y1="{a[1]}" x2="{b[0]}" y2="{b[1]}" stroke="#2277aa" stroke-width="0.5"/>',
-                      f'<text x="0" y="370" fill="#222" stroke="none" font-size="10">{name} / cut {piece["cut_quantity"]} / grain blue</text>', '</g>'])
-    parts.extend(['</g>', '<path d="M 30 1220 h 100 v 100 h -100 z" fill="none" stroke="black" stroke-width="0.4"/>',
-                  '<text x="30" y="1210" font-size="9">100 x 100 mm check square</text>',
-                  '<text x="150" y="1230" font-size="10">SYNTHETIC PROTOTYPE - NOT FOR CUTTING / PRINT 100% NO FIT TO PAGE</text>', '</svg>'])
+        parts.extend([f'<line class="grainline" x1="{a[0]}" y1="{a[1]}" x2="{b[0]}" y2="{b[1]}"/>',
+                      f'<text x="0" y="370" font-size="22">{name} / cut {piece["cut_quantity"]} / grain blue</text>', '</g>'])
+    parts.extend(['</g>', '<path class="cutline" fill="none" d="M 30 1220 h 100 v 100 h -100 z"/>',
+                  '<text x="30" y="1196" font-size="18">100 x 100 mm check square</text>',
+                  '<text x="150" y="1230" font-size="18">SYNTHETIC PROTOTYPE - NOT FOR CUTTING / PRINT 100% NO FIT TO PAGE</text>', '</svg>'])
     return "\n".join(parts) + "\n"
 
 

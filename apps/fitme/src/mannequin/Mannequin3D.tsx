@@ -9,8 +9,15 @@ import {
   armSpread,
   legAt,
   legSpread,
+  BACK_NECK_H,
+  CROTCH_H,
+  TEE_HEM_H,
+  WIDTH_STATIONS,
+  crotchHeightCm,
+  teeLengthCm,
   fitWidths,
   previewDimensions,
+  sectionWidthCm,
   superEllipse,
   torsoAt,
   type WidthKey,
@@ -36,18 +43,19 @@ type PartSpec = {
   /** 向前偏移，单位为身高占比。手臂略靠前，侧面才看得见腰腹轮廓 */
   forward?: number;
   shell?: number;
+  limb?: "torso" | "leg" | "arm";
 };
 
 const BODY_PARTS: PartSpec[] = [
-  { rings: 84, from: 0.468, to: 1.0, n: 2.45, at: torsoAt, offset: () => 0, side: 0, capBottom: false, capTop: true },
-  { rings: 44, from: 0.012, to: 0.58, n: 2.15, at: legAt, offset: legSpread, side: -1, capBottom: true, capTop: false },
-  { rings: 44, from: 0.012, to: 0.58, n: 2.15, at: legAt, offset: legSpread, side: 1, capBottom: true, capTop: false },
-  { rings: 40, from: 0.398, to: 0.845, n: 2.1, at: armAt, offset: armSpread, side: -1, forward: 0.012, capBottom: true, capTop: false },
-  { rings: 40, from: 0.398, to: 0.845, n: 2.1, at: armAt, offset: armSpread, side: 1, forward: 0.012, capBottom: true, capTop: false },
+  { rings: 84, from: 0.468, to: 1.0, n: 2.45, at: torsoAt, offset: () => 0, side: 0, capBottom: false, capTop: true, limb: "torso" },
+  { rings: 44, from: 0.012, to: 0.58, n: 2.15, at: legAt, offset: legSpread, side: -1, capBottom: true, capTop: false, limb: "leg" },
+  { rings: 44, from: 0.012, to: 0.58, n: 2.15, at: legAt, offset: legSpread, side: 1, capBottom: true, capTop: false, limb: "leg" },
+  { rings: 40, from: 0.398, to: 0.845, n: 2.1, at: armAt, offset: armSpread, side: -1, forward: 0.012, capBottom: true, capTop: false, limb: "arm" },
+  { rings: 40, from: 0.398, to: 0.845, n: 2.1, at: armAt, offset: armSpread, side: 1, forward: 0.012, capBottom: true, capTop: false, limb: "arm" },
 ];
 
 const GARMENT_PARTS: PartSpec[] = [
-  { rings: 35, from: 0.625, to: 0.825, n: 2.45, at: torsoAt, offset: () => 0, side: 0, shell: 0.009, capBottom: false, capTop: false },
+  { rings: 35, from: TEE_HEM_H, to: 0.825, n: 2.45, at: torsoAt, offset: () => 0, side: 0, shell: 0.009, capBottom: false, capTop: false },
   { rings: 20, from: 0.66, to: 0.825, n: 2.1, at: armAt, offset: armSpread, side: -1, forward: 0.012, shell: 0.007, capBottom: false, capTop: false },
   { rings: 20, from: 0.66, to: 0.825, n: 2.1, at: armAt, offset: armSpread, side: 1, forward: 0.012, shell: 0.007, capBottom: false, capTop: false },
 ];
@@ -122,10 +130,93 @@ function writePositions(geom: THREE.BufferGeometry, spec: PartSpec, beta: Beta) 
 /** 让人台不论多高都占满画面同样的比例 */
 function fitCamera(camera: THREE.PerspectiveCamera, heightCm: number) {
   const h = heightCm / 100;
-  const dist = h / 0.80 / (2 * Math.tan((camera.fov * Math.PI) / 360));
-  camera.position.set(0, h * 0.54, dist);
-  camera.lookAt(0, h * 0.54, 0);
+  const dist = h / 0.70 / (2 * Math.tan((camera.fov * Math.PI) / 360));
+  camera.position.set(0, h * 0.46, dist);
+  camera.lookAt(0, h * 0.46, 0);
   camera.updateProjectionMatrix();
+}
+
+const rulerPoint = new THREE.Vector3();
+
+function rulerScreen(group: THREE.Object3D, camera: THREE.Camera, x: number, y: number, z: number, width: number, height: number) {
+  rulerPoint.set(x, y, z);
+  group.localToWorld(rulerPoint);
+  rulerPoint.project(camera);
+  return {
+    x: (rulerPoint.x * 0.5 + 0.5) * width,
+    y: (-rulerPoint.y * 0.5 + 0.5) * height,
+  };
+}
+
+function drawMannequinRulers(svg: SVGSVGElement, host: HTMLElement, camera: THREE.Camera, group: THREE.Object3D, beta: Beta) {
+  const width = host.clientWidth;
+  const height = host.clientHeight;
+  if (width < 20 || height < 20) return;
+  group.updateMatrixWorld();
+  const meters = beta.heightCm / 100;
+  const head = rulerScreen(group, camera, 0, meters, 0, width, height);
+  const foot = rulerScreen(group, camera, 0, 0.012 * meters, 0, width, height);
+  const half = (key: WidthKey) => sectionWidthCm(beta, WIDTH_STATIONS[key]) / 200;
+  const shoulder = half("shoulder");
+  const left = rulerScreen(group, camera, -shoulder, 0.02 * meters, 0, width, height);
+  const right = rulerScreen(group, camera, shoulder, 0.02 * meters, 0, width, height);
+  const center = (left.x + right.x) / 2;
+  const halfPx = Math.abs(right.x - center);
+  const rulerX = Math.min(Math.max(Math.max(left.x, right.x) + 14, width * 0.56), width - 78);
+  const parts: string[] = [];
+  parts.push(`<line x1="${rulerX}" y1="${head.y}" x2="${rulerX}" y2="${foot.y}"/>`);
+  for (let cm = 0; cm <= beta.heightCm + 0.1; cm += 10) {
+    const y = rulerScreen(group, camera, 0, (cm / beta.heightCm) * meters, 0, width, height).y;
+    const major = cm % 20 === 0;
+    parts.push(`<line x1="${rulerX}" y1="${y}" x2="${rulerX + (major ? 9 : 5)}" y2="${y}"/>`);
+    if (major) parts.push(`<text x="${rulerX + 12}" y="${y + 3}" text-anchor="start">${cm}</text>`);
+  }
+  const crotchCm = crotchHeightCm(beta);
+  const crotchY = rulerScreen(group, camera, 0, CROTCH_H * meters, 0, width, height).y;
+  const floorY = rulerScreen(group, camera, 0, 0, 0, width, height).y;
+  const crotchEdge = rulerScreen(group, camera, torsoAt(beta, CROTCH_H).a * meters, CROTCH_H * meters, 0, width, height);
+  const dimX = rulerX - 12;
+  const leadStart = Math.min(crotchEdge.x + 2, dimX - 8);
+  parts.push(`<line x1="${leadStart}" y1="${crotchY}" x2="${rulerX + 9}" y2="${crotchY}"/>`);
+  parts.push(`<line x1="${dimX}" y1="${floorY}" x2="${dimX}" y2="${crotchY}"/>`);
+  parts.push(`<polygon points="${dimX},${crotchY} ${dimX - 3.5},${crotchY + 8} ${dimX + 3.5},${crotchY + 8}"/>`);
+  parts.push(`<polygon points="${dimX},${floorY} ${dimX - 3.5},${floorY - 8} ${dimX + 3.5},${floorY - 8}"/>`);
+  parts.push(`<text x="${leadStart}" y="${crotchY - 6}" text-anchor="end">裆高 ${crotchCm.toFixed(1)}</text>`);
+  const neckY = rulerScreen(group, camera, 0, BACK_NECK_H * meters, 0, width, height).y;
+  const hemY = rulerScreen(group, camera, 0, TEE_HEM_H * meters, 0, width, height).y;
+  const neckEdge = rulerScreen(group, camera, -torsoAt(beta, BACK_NECK_H).a * meters, BACK_NECK_H * meters, 0, width, height);
+  const hemEdge = rulerScreen(group, camera, -torsoAt(beta, TEE_HEM_H).a * meters, TEE_HEM_H * meters, 0, width, height);
+  const teeX = Math.min(neckEdge.x, hemEdge.x) - 14;
+  parts.push(`<line x1="${neckEdge.x}" y1="${neckY}" x2="${rulerX + 9}" y2="${neckY}"/>`);
+  parts.push(`<line x1="${hemEdge.x}" y1="${hemY}" x2="${rulerX + 9}" y2="${hemY}"/>`);
+  parts.push(`<line x1="${teeX}" y1="${neckY}" x2="${teeX}" y2="${hemY}"/>`);
+  parts.push(`<polygon points="${teeX},${neckY} ${teeX - 3.5},${neckY + 8} ${teeX + 3.5},${neckY + 8}"/>`);
+  parts.push(`<polygon points="${teeX},${hemY} ${teeX - 3.5},${hemY - 8} ${teeX + 3.5},${hemY - 8}"/>`);
+  parts.push(`<text x="${Math.max(4, teeX - 6)}" y="${(neckY + hemY) / 2}" text-anchor="end">后领到衣摆 ${teeLengthCm(beta).toFixed(1)}</text>`);
+  parts.push(`<text x="${rulerX + 12}" y="${Math.max(12, head.y - 6)}" text-anchor="start">身高 ${beta.heightCm.toFixed(0)}</text>`);
+  const soleY = Math.max(
+    foot.y,
+    rulerScreen(group, camera, 0, 0, 0.06 * meters, width, height).y,
+    rulerScreen(group, camera, shoulder, 0, 0.05 * meters, width, height).y,
+    rulerScreen(group, camera, -shoulder, 0, 0.05 * meters, width, height).y
+  );
+  const shoulderCm = sectionWidthCm(beta, WIDTH_STATIONS.shoulder);
+  const barY = Math.min(soleY + 22, height - 46);
+  const originX = center - halfPx;
+  const pxPerCm = (halfPx * 2) / shoulderCm;
+  parts.push(`<line x1="${originX}" y1="${barY}" x2="${originX + shoulderCm * pxPerCm}" y2="${barY}"/>`);
+  for (let cm = 0; cm <= shoulderCm + 0.1; cm += 5) {
+    const x = originX + cm * pxPerCm;
+    const major = cm % 10 === 0;
+    parts.push(`<line x1="${x}" y1="${barY}" x2="${x}" y2="${barY + (major ? 8 : 4)}"/>`);
+    if (major) parts.push(`<text x="${x}" y="${barY + 18}" text-anchor="middle">${cm}</text>`);
+  }
+  const widthNotes = (["shoulder", "chest", "waist", "hip"] as WidthKey[])
+    .map((key) => `${{ shoulder: "肩", chest: "胸", waist: "腰", hip: "臀" }[key]}${sectionWidthCm(beta, WIDTH_STATIONS[key]).toFixed(1)}`)
+    .join("  ");
+  parts.push(`<text x="${center}" y="${Math.min(barY + 32, height - 4)}" text-anchor="middle">${widthNotes}</text>`);
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.innerHTML = parts.join("");
 }
 
 const VIEWS = [
@@ -159,6 +250,7 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
   const [glbError, setGlbError] = useState("");
   const [showGarment, setShowGarment] = useState(true);
   const [detail, setDetail] = useState<"hand" | "foot" | null>(null);
+  const detailRef = useRef<HTMLDivElement>(null);
   const [heightEntered, setHeightEntered] = useState(false);
   const [manualWidths, setManualWidths] = useState<Partial<Record<WidthKey, true>>>({});
   const [widthDraft, setWidthDraft] = useState<{ key: WidthKey; text: string } | null>(null);
@@ -199,6 +291,10 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.02;
     host.appendChild(renderer.domElement);
+    const ruler = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    ruler.setAttribute("class", "mq-ruler");
+    ruler.setAttribute("aria-label", "身高和宽度刻度");
+    host.parentElement?.appendChild(ruler);
 
     const scene = new THREE.Scene();
     const pmrem = new THREE.PMREMGenerator(renderer);
@@ -259,6 +355,11 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
       yaw.current += (targetYaw.current - yaw.current) * 0.12;
       group.rotation.y = yaw.current;
       renderer.render(scene, camera);
+      try {
+        drawMannequinRulers(ruler, host, camera, group, betaRef.current);
+      } catch {
+        ruler.replaceChildren();
+      }
       frames++;
       const now = performance.now();
       if (now - tick > 1000) {
@@ -289,6 +390,7 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
       garmentMatRef.current?.dispose();
       scene.environment?.dispose();
       host.removeChild(renderer.domElement);
+      ruler.remove();
       groupRef.current = null;
       cameraRef.current = null;
     };
@@ -329,6 +431,7 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
       writePositions(geom, spec, betaNow);
       const mesh = new THREE.Mesh(geom, mat);
       mesh.castShadow = true;
+      mesh.userData.limb = spec.limb;
       parent.add(mesh);
       return { geom, spec };
     });
@@ -419,15 +522,20 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
       const ray = new THREE.Raycaster();
       ray.setFromCamera(ndc, cameraRef.current);
       const hit = ray.intersectObjects(hitTargetsRef.current, true)[0];
-      if (hit) {
-        const height = betaRef.current.heightCm / 100;
-        const part = hit.point.y / height;
-        if (part < 0.11) setDetail("foot");
-        else if (part > 0.34 && part < 0.46 && Math.abs(hit.point.x) / height > 0.085) setDetail("hand");
+      if (hit && groupRef.current) {
+        const local = groupRef.current.worldToLocal(hit.point.clone());
+        const part = local.y / (betaRef.current.heightCm / 100);
+        const limb = hit.object.userData.limb;
+        if (limb === "leg" && part < 0.22) setDetail("foot");
+        else if (limb === "arm" && part < 0.55) setDetail("hand");
       }
     }
     dragging.current = false;
   }
+
+  useEffect(() => {
+    if (detail) detailRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [detail]);
 
   function pickView(id: string, angle: number) {
     setView(id);
@@ -515,8 +623,8 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
         </div>
       </div>
       {detail ? (
-        <div className="mq-detail" role="region" aria-label={`${detail === "hand" ? "手" : "脚"}部详情`}>
-          <div className="mq-detail-head"><b>{detail === "hand" ? "手部" : "脚部"} · 缺失</b><button type="button" onClick={() => setDetail(null)} aria-label="关闭详情">关闭</button></div>
+        <div className="mq-detail" ref={detailRef} role="region" aria-label={`${detail === "hand" ? "手" : "脚"}部详情`}>
+          <div className="mq-detail-head"><b>{detail === "hand" ? "手部" : "脚部"}详情</b><button type="button" onClick={() => setDetail(null)} aria-label="关闭详情">关闭</button></div>
           {(detail === "hand" ? ["手掌长", "手掌宽", "手腕围", "臂长"] : ["脚长", "脚宽", "足围"]).map((item) => (
             <div className="mq-detail-row" key={item}><span>{item}</span><span>未测 · 无照片测算值</span></div>
           ))}
@@ -598,13 +706,13 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
           {fitNote ? <p className="muted">{fitNote}</p> : null}
         </section>
         <section className="mq-height-panel" aria-label="右侧身高和上下身面板">
-          <b>身高 / 上下身</b>
+          <b>身高 / 裆高</b>
           {dimensions.heights.map((item) => (
             <div className="mq-height-item" key={item.label}>
               <span>{item.label}</span><strong>{item.value?.toFixed(1)} cm</strong><small>{item.source}</small>
             </div>
           ))}
-          <p className="muted">以示意胯线（身高 47%）分段：上身 53%、下身 47%；不是衣长、腿长或实测值。</p>
+          <p className="muted">裆高从地面量到两腿分叉处。后领到衣摆停在臀围最宽处，那里只比分叉处高出大约 4 厘米。不是袖长，也不是真实衣服量出来的衣长。</p>
         </section>
       </div>
       <button className="btn btn-outline" onClick={onBack}>结束本地预览（不保存）</button>

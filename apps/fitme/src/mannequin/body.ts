@@ -27,12 +27,19 @@ type Section = { h: number; a: number; b: number; cz?: number; front?: number };
 
 export type Slice = { a: number; b: number; cz: number; front: number };
 
-/** 躯干 + 颈 + 头：一条从胯到头顶的连续轮廓 */
+/** 躯干下缘即这具示意人体的分叉处。裆高是站直后从地面到该点的垂直距离。 */
+export const CROTCH_H = 0.48;
+/** 颈根变细处，当作后领位置。 */
+export const BACK_NECK_H = 0.838;
+/** 臀围最宽处。比分叉处高约 4 厘米（按 170 厘米身高），衣摆对齐这里。 */
+export const TEE_HEM_H = 0.505;
+
+/** 躯干 + 颈 + 头：一条从分叉处到头顶的连续轮廓 */
 const TORSO: Section[] = [
-  { h: 0.470, a: 0.084, b: 0.064 },
-  { h: 0.510, a: 0.100, b: 0.072, cz: -0.006 },
-  { h: 0.545, a: 0.100, b: 0.074, cz: -0.008 },
-  { h: 0.575, a: 0.088, b: 0.064, cz: -0.004 },
+  { h: CROTCH_H, a: 0.078, b: 0.060 },
+  { h: TEE_HEM_H, a: 0.106, b: 0.080, cz: -0.006 },
+  { h: 0.545, a: 0.094, b: 0.070, cz: -0.006 },
+  { h: 0.575, a: 0.084, b: 0.062, cz: -0.004 },
   { h: 0.612, a: 0.076, b: 0.056 },
   { h: 0.648, a: 0.072, b: 0.056, cz: 0.004 },
   { h: 0.685, a: 0.086, b: 0.064, cz: 0.006 },
@@ -229,7 +236,7 @@ export const WIDTH_STATIONS = {
   shoulder: 0.8,
   chest: 0.735,
   waist: 0.63,
-  hip: 0.54,
+  hip: TEE_HEM_H,
 } as const;
 
 export type WidthKey = keyof typeof WIDTH_STATIONS;
@@ -311,20 +318,31 @@ export function fitWidths(beta: Beta, targets: Partial<Record<WidthKey, number>>
   return { ok: true, beta: next };
 }
 
+/** 裆高：站直后从地面到两腿分叉处的垂直距离，取这具示意人体的躯干下缘。 */
+export function crotchHeightCm(beta: Beta) {
+  return beta.heightCm * CROTCH_H;
+}
+
+/** 后领到衣摆的垂直距离。衣摆取臀宽高度，不是裆高，也不是真实衣服的衣长。 */
+export function teeLengthCm(beta: Beta) {
+  return beta.heightCm * (BACK_NECK_H - TEE_HEM_H);
+}
+
 /** 所有推算只针对参数化示意网格，不代表照片或真人尺寸。 */
 export function previewDimensions(beta: Beta, heightEntered: boolean) {
   const width = (h: number) => 2 * torsoAt(beta, h).a * beta.heightCm;
+  const crotch = crotchHeightCm(beta);
   return {
     widths: [
       { key: "shoulder", label: "肩宽", value: width(0.8), source: "演示推算" },
       { key: "chest", label: "胸宽", value: width(0.735), source: "演示推算" },
       { key: "waist", label: "腰宽", value: width(0.63), source: "演示推算" },
-      { key: "hip", label: "臀宽", value: width(0.54), source: "演示推算" },
+      { key: "hip", label: "臀宽", value: width(TEE_HEM_H), source: "演示推算" },
     ] as PreviewDimension[],
     heights: [
       { label: "身高", value: beta.heightCm, source: heightEntered ? "手工录入 · 仅本页" : "演示推算" },
-      { label: "上身示意段", value: beta.heightCm * 0.53, source: "演示推算" },
-      { label: "下身示意段", value: beta.heightCm * 0.47, source: "演示推算" },
+      { label: "裆高", value: crotch, source: "演示推算" },
+      { label: "后领到衣摆", value: teeLengthCm(beta), source: "演示推算" },
     ] as PreviewDimension[],
   };
 }
@@ -340,7 +358,7 @@ export function measure(beta: Beta): Girths {
     waist = Math.min(waist, girth(...atH(beta, h), beta.heightCm));
   }
   let hip = 0;
-  for (let h = 0.505; h <= 0.575; h += 0.004) {
+  for (let h = 0.49; h <= 0.53; h += 0.004) {
     hip = Math.max(hip, girth(...atH(beta, h), beta.heightCm));
   }
   return { chest, waist, hip };
