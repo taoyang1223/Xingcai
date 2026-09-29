@@ -245,7 +245,7 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
   const [beta, setBeta] = useState<Beta>(DEFAULT_BETA);
   const [view, setView] = useState("front");
   const [fps, setFps] = useState(0);
-  const [mode, setMode] = useState<AssetMode>(() => assetModeFromLocation());
+  const [mode] = useState<AssetMode>(() => assetModeFromLocation());
   const [glbStatus, setGlbStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [glbError, setGlbError] = useState("");
   const [showGarment, setShowGarment] = useState(true);
@@ -465,7 +465,7 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
         glbRef.current = handle;
         hitTargetsRef.current = handle.bodyMeshes;
         garmentRef.current = handle.garment;
-        handle.garment.visible = showGarment;
+        handle.setClothesVisible(showGarment);
         group.add(handle.root);
         handle.applyBeta(betaRef.current);
         setGlbStatus("ok");
@@ -485,7 +485,8 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
   }, [mode]);
 
   useEffect(() => {
-    if (garmentRef.current) garmentRef.current.visible = showGarment;
+    glbRef.current?.setClothesVisible(showGarment);
+    if (!glbRef.current && garmentRef.current) garmentRef.current.visible = showGarment;
   }, [showGarment]);
 
   useEffect(() => {
@@ -542,19 +543,6 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
     targetYaw.current = angle;
   }
 
-  function switchMode(next: AssetMode) {
-    setMode(next);
-    const url = new URL(window.location.href);
-    if (next === "glb") {
-      if (url.hash.startsWith("#shape")) url.hash = "#shape?asset=glb";
-      else url.searchParams.set("asset", "glb");
-    } else {
-      if (url.hash.startsWith("#shape")) url.hash = "#shape";
-      else url.searchParams.delete("asset");
-    }
-    history.replaceState(null, "", url.toString());
-  }
-
   const sliders: { key: keyof Beta; label: string; hint: (v: number) => string }[] = [
     { key: "fat", label: "整体胖瘦", hint: (v) => (v < 0.3 ? "偏瘦" : v < 0.55 ? "标准" : v < 0.78 ? "偏胖一点" : "偏胖") },
     { key: "belly", label: "肚子", hint: (v) => (v < 0.25 ? "平" : v < 0.5 ? "有一点" : v < 0.75 ? "明显" : "很明显") },
@@ -567,29 +555,8 @@ export default function Mannequin3D({ onBack }: { onBack: () => void }) {
       <h1 className="h1" style={{ marginTop: 4 }}>人台 · 本地演示</h1>
       <p className="muted" style={{ margin: "4px 0 10px" }}>以下数字仅为演示网格推算，不是你的测量结果。拖动旋转，滑杆实时校准 3D；离开本页即丢弃，不保存、不上传。</p>
 
-      <div className="mq-modes" role="tablist" aria-label="人台资产">
-        <button
-          type="button"
-          className={mode === "procedural" ? "mq-mode on" : "mq-mode"}
-          onClick={() => switchMode("procedural")}
-        >
-          程序化
-        </button>
-        <button
-          type="button"
-          className={mode === "glb" ? "mq-mode on" : "mq-mode"}
-          onClick={() => switchMode("glb")}
-        >
-          GLB 占位
-        </button>
-      </div>
-      {mode === "glb" ? (
-        <p className="mq-asset-note muted">
-          {glbStatus === "loading" && "正在加载占位 GLB…"}
-          {glbStatus === "ok" && `已加载 ${PLACEHOLDER_MANIFEST.assetId} 占位演示（非正式资产）`}
-          {glbStatus === "error" && `占位 GLB 不可用，已回退程序化演示：${glbError}`}
-          {glbStatus === "idle" && "GLB 仅为占位演示，非正式资产"}
-        </p>
+      {glbStatus === "error" ? (
+        <p className="mq-asset-note muted">外形文件没有加载成功，当前显示的是参数人台。{glbError}</p>
       ) : null}
 
       <label className="mq-toggle">

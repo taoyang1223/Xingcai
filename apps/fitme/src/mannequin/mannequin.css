@@ -170,28 +170,7 @@
   margin: 0 0 14px;
 }
 
-.mq-modes {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.mq-mode {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
-  background: #fff;
-  cursor: pointer;
-}
-.mq-mode.on {
-  border-color: var(--teal-dark);
-  color: var(--teal-dark);
-  background: var(--mint);
-}
 .mq-asset-note {
   font-size: 12px;
   margin: 0 0 12px;
-  min-height: 1.2em;
 }

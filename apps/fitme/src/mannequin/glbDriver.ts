@@ -7,6 +7,7 @@ export type GlbHandle = {
   root: THREE.Group;
   garment: THREE.Group;
   bodyMeshes: THREE.Mesh[];
+  setClothesVisible: (show: boolean) => void;
   applyBeta: (beta: Beta) => void;
   dispose: () => void;
 };
@@ -69,8 +70,28 @@ function polishMaterial(kind: "body" | "garment"): THREE.Material {
     color: kind === "body" ? 0xcfc3b3 : 0x3a8e87,
     roughness: kind === "body" ? 0.82 : 0.92,
     metalness: 0.02,
-    side: kind === "garment" ? THREE.DoubleSide : THREE.FrontSide,
+    transparent: false,
+    opacity: 1,
+    depthWrite: true,
+    side: THREE.DoubleSide,
   });
+}
+
+/** 衣服沿法线外移，避免和里面的身体贴在同一面上发虚。 */
+function liftAlongNormals(geometry: THREE.BufferGeometry, amount: number) {
+  const pos = geometry.getAttribute("position");
+  if (!geometry.getAttribute("normal")) geometry.computeVertexNormals();
+  const nor = geometry.getAttribute("normal");
+  if (!pos || !nor) return;
+  for (let i = 0; i < pos.count; i++) {
+    pos.setXYZ(
+      i,
+      pos.getX(i) + nor.getX(i) * amount,
+      pos.getY(i) + nor.getY(i) * amount,
+      pos.getZ(i) + nor.getZ(i) * amount,
+    );
+  }
+  pos.needsUpdate = true;
 }
 
 export async function loadGlbMannequin(manifest: MannequinManifest): Promise<GlbHandle> {
@@ -92,7 +113,52 @@ export async function loadGlbMannequin(manifest: MannequinManifest): Promise<Glb
     mesh.material = polishMaterial(kind);
     oldMaterials.forEach((mat) => mat?.dispose());
   });
-  garmentMeshes.forEach((mesh) => garment.attach(mesh));
+  const sourceBody = [...bodyMeshes];
+  const underMeshes: THREE.Mesh[] = [];
+  garmentMeshes.forEach((mesh) => {
+    const under = new THREE.Mesh(mesh.geometry.clone(), polishMaterial("body"));
+    under.name = "body_under";
+    under.castShadow = true;
+    under.position.copy(mesh.position);
+    under.quaternion.copy(mesh.quaternion);
+    under.scale.copy(mesh.scale);
+    mesh.parent?.add(under);
+    underMeshes.push(under);
+    bodyMeshes.push(under);
+    liftAlongNormals(mesh.geometry, 0.004);
+    garment.attach(mesh);
+  });
+
+  const complete = new THREE.Group();
+  complete.name = "BodyComplete";
+  complete.visible = false;
+  root.add(complete);
+  if (manifest.bodyCompleteUrl) {
+    try {
+      const extra = await loader.loadAsync(manifest.bodyCompleteUrl);
+      extra.scene.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.castShadow = true;
+        const oldMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        mesh.material = polishMaterial("body");
+        oldMaterials.forEach((mat) => mat?.dispose());
+        bodyMeshes.push(mesh);
+      });
+      complete.add(extra.scene);
+    } catch {
+      complete.clear();
+    }
+  }
+
+  const setClothesVisible = (show: boolean) => {
+    const filled = complete.children.length > 0;
+    garment.visible = show;
+    sourceBody.forEach((mesh) => { mesh.visible = show || !filled; });
+    underMeshes.forEach((mesh) => { mesh.visible = !show && !filled; });
+    complete.visible = !show && filled;
+  };
+  setClothesVisible(true);
 
   const bindAll = (name: string) =>
     [...bodyMeshes, ...garmentMeshes].map((mesh) => bindMorph(mesh, name)).filter((slot): slot is MorphSlot => slot !== null);
@@ -101,21 +167,8 @@ export async function loadGlbMannequin(manifest: MannequinManifest): Promise<Glb
     belly: bindAll(manifest.morphs.belly),
     shoulder: bindAll(manifest.morphs.shoulder),
   };
-  const bound = {
-    [manifest.morphs.fat]: slots.fat.length === meshes.length,
-    [manifest.morphs.belly]: slots.belly.length === meshes.length,
-    [manifest.morphs.shoulder]: slots.shoulder.length === meshes.length,
-  };
-  const missing = !bodyMeshes.length || !garmentMeshes.length || Object.values(bound).some((v) => !v);
-  if (missing) {
-    root.traverse((o) => {
-      const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      mesh.geometry.dispose();
-      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      mats.forEach((mat) => mat.dispose());
-    });
-    throw new Error("GLB 占位缺少人体/衣服独立网格或同驱 morph");
+  if (!bodyMeshes.length && !garmentMeshes.length) {
+    throw new Error("GLB 里没有网格");
   }
 
   const applyBeta = (beta: Beta) => applyBetaToGlb(root, manifest, slots, beta);
@@ -125,6 +178,7 @@ export async function loadGlbMannequin(manifest: MannequinManifest): Promise<Glb
     root,
     garment,
     bodyMeshes,
+    setClothesVisible,
     applyBeta,
     dispose: () => {
       root.traverse((o) => {

@@ -16,8 +16,37 @@ import measure_pb2  # noqa: E402
 import measure_pb2_grpc  # noqa: E402
 import ocr_pb2  # noqa: E402
 import ocr_pb2_grpc  # noqa: E402
+from fastapi import HTTPException
+from pydantic import BaseModel
+
+from app.providers.body_complete import complete_parts_dir  # noqa: E402
 from app.providers.manual import ManualProvider  # noqa: E402
 from app.providers.ocr_stub import OcrStub  # noqa: E402
+
+_REPO = Path(__file__).resolve().parents[3]
+_ALLOWED = (
+    Path.home() / ".config" / "fitme" / "preview",
+    _REPO / "apps" / "fitme" / "public" / "mannequin",
+)
+
+
+def _allowed(path: Path) -> bool:
+    resolved = path.expanduser().resolve()
+    return any(_inside(resolved, root) for root in _ALLOWED)
+
+
+def _inside(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root.expanduser().resolve())
+        return True
+    except ValueError:
+        return False
+
+
+class CompleteBodyRequest(BaseModel):
+    parts_dir: str
+    garment: str = "1,3"
+    out: str
 
 
 class MeasureServicer(measure_pb2_grpc.MeasureServiceServicer):
@@ -55,6 +84,19 @@ http_app = FastAPI(title="fitme-algo")
 @http_app.get("/healthz")
 def http_health():
     return {"status": "ok", "provider": "manual"}
+
+
+@http_app.post("/body/complete")
+def http_complete_body(req: CompleteBodyRequest):
+    parts = Path(req.parts_dir).expanduser()
+    out = Path(req.out).expanduser()
+    if not _allowed(parts) or not _allowed(out):
+        raise HTTPException(status_code=400, detail="路径必须在预览目录或人台资源目录里")
+    garment = {int(x) for x in req.garment.split(",") if x.strip()}
+    try:
+        return complete_parts_dir(parts, garment, out)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 def serve_http(addr: str) -> None:

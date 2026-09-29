@@ -1,5 +1,7 @@
 """按人台合同导出 GLB。合同见 docs/tech/13 第 3 节与 apps/fitme/src/mannequin/manifest.ts。
 
+身体和衣服必须分成两块网格，衣服的物体名含 garment。不依赖 Blender 的同一份检查见 check_display_glb.py。
+
 Blender 内部是 Z 朝上；glTF 导入后身高在 Z。导出时 export_yup=True，文件里仍是 Y 朝上。
 
 用法（Blender 5.2）：
@@ -71,6 +73,10 @@ def morph_names(obj: bpy.types.Object) -> list[str]:
     return [block.name for block in keys.key_blocks if block.name != "Basis"]
 
 
+def is_garment(name: str) -> bool:
+    return "garment" in name.lower()
+
+
 def world_height_z(obj: bpy.types.Object) -> float:
     zs = [(obj.matrix_world @ Vector(corner)).z for corner in obj.bound_box]
     return max(zs) - min(zs)
@@ -94,7 +100,14 @@ def validate() -> None:
             else:
                 extra.append(f"{obj.name}:{name}")
 
+    bodies = [obj.name for obj in meshes if not is_garment(obj.name)]
+    garments = [obj.name for obj in meshes if is_garment(obj.name)]
     missing = [name for name, owners in found.items() if not owners]
+    incomplete = [
+        obj.name
+        for obj in meshes
+        if any(name not in morph_names(obj) for name in REQUIRED)
+    ]
     height = max(heights) if heights else 0.0
     print(
         f"meshes={len(meshes)} tris={total} height_z={height:.3f}m "
@@ -102,8 +115,11 @@ def validate() -> None:
     )
     if extra:
         print("extra_shape_keys", ", ".join(extra))
-    if missing:
-        raise SystemExit("缺少形态名: " + ", ".join(missing) + "。需要 " + ", ".join(REQUIRED))
+    if not bodies or not garments:
+        raise SystemExit("需要至少一块身体网格，以及一块名字含 garment 的衣服网格")
+    if missing or incomplete:
+        detail = ", ".join(missing or incomplete)
+        raise SystemExit("缺少形态名: " + detail + "。每块网格都需要 " + ", ".join(REQUIRED))
     if total > MAX_TRIS:
         raise SystemExit(f"三角面 {total} 超过 {MAX_TRIS}")
     if not HEIGHT_MIN_M <= height <= HEIGHT_MAX_M:
