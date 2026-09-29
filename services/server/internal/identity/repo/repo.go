@@ -79,7 +79,7 @@ func (r pgRepo) InsertAuth(ctx context.Context, userID int64, provider, openID s
 func (r pgRepo) HasBodyProfile(ctx context.Context, userID int64) (bool, error) {
 	var ok bool
 	err := r.db.QueryRow(ctx,
-		`SELECT EXISTS(SELECT 1 FROM body_profiles WHERE user_id = $1 AND deleted_at IS NULL)`,
+		`SELECT EXISTS(SELECT 1 FROM safe_body_profiles p JOIN safe_body_consents c ON c.id=p.consent_id WHERE p.user_id=$1 AND c.user_id=$1 AND c.revoked_at IS NULL)`,
 		userID,
 	).Scan(&ok)
 	return ok, err

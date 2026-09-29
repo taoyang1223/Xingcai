@@ -18,8 +18,6 @@ func Register(g *gin.RouterGroup, svc service.Service, secret []byte) {
 	need.Use(auth.Middleware(secret))
 	need.GET("/user/profile", func(c *gin.Context) { profile(c, svc) })
 	need.PATCH("/user/profile", response.NotImplemented)
-	need.GET("/user/consents", response.NotImplemented)
-	need.POST("/user/consents", response.NotImplemented)
 	need.POST("/user/deletion", response.NotImplemented)
 }
 

@@ -9,9 +9,11 @@ import {
   armSpread,
   legAt,
   legSpread,
-  measure,
+  fitWidths,
+  previewDimensions,
   superEllipse,
   torsoAt,
+  type WidthKey,
 } from "./body";
 import { loadGlbMannequin, type GlbHandle } from "./glbDriver";
 import {
@@ -33,14 +35,21 @@ type PartSpec = {
   capTop: boolean;
   /** 向前偏移，单位为身高占比。手臂略靠前，侧面才看得见腰腹轮廓 */
   forward?: number;
+  shell?: number;
 };
 
-const PARTS: PartSpec[] = [
+const BODY_PARTS: PartSpec[] = [
   { rings: 84, from: 0.468, to: 1.0, n: 2.45, at: torsoAt, offset: () => 0, side: 0, capBottom: false, capTop: true },
   { rings: 44, from: 0.012, to: 0.58, n: 2.15, at: legAt, offset: legSpread, side: -1, capBottom: true, capTop: false },
   { rings: 44, from: 0.012, to: 0.58, n: 2.15, at: legAt, offset: legSpread, side: 1, capBottom: true, capTop: false },
   { rings: 40, from: 0.398, to: 0.845, n: 2.1, at: armAt, offset: armSpread, side: -1, forward: 0.012, capBottom: true, capTop: false },
   { rings: 40, from: 0.398, to: 0.845, n: 2.1, at: armAt, offset: armSpread, side: 1, forward: 0.012, capBottom: true, capTop: false },
+];
+
+const GARMENT_PARTS: PartSpec[] = [
+  { rings: 35, from: 0.625, to: 0.825, n: 2.45, at: torsoAt, offset: () => 0, side: 0, shell: 0.009, capBottom: false, capTop: false },
+  { rings: 20, from: 0.66, to: 0.825, n: 2.1, at: armAt, offset: armSpread, side: -1, forward: 0.012, shell: 0.007, capBottom: false, capTop: false },
+  { rings: 20, from: 0.66, to: 0.825, n: 2.1, at: armAt, offset: armSpread, side: 1, forward: 0.012, shell: 0.007, capBottom: false, capTop: false },
 ];
 
 function buildGeometry(spec: PartSpec, radial: number) {
@@ -85,7 +94,7 @@ function writePositions(geom: THREE.BufferGeometry, spec: PartSpec, beta: Beta) 
     const dx = spec.offset(beta, h) * spec.side * hm;
     for (let j = 0; j < RADIAL; j++) {
       const th = (j / RADIAL) * Math.PI * 2;
-      const e = superEllipse(a, b, th, spec.n);
+      const e = superEllipse(a + (spec.shell ?? 0), b + (spec.shell ?? 0), th, spec.n);
       arr[p++] = e.x * hm + dx;
       arr[p++] = h * hm;
       arr[p++] = e.z * hm + dz;
@@ -125,26 +134,56 @@ const VIEWS = [
   { id: "side", label: "侧面", angle: -Math.PI / 2 },
 ];
 
-export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; onSave: (b: Beta) => void }) {
+export default function Mannequin3D({ onBack }: { onBack: () => void }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<THREE.Group | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const meshesRef = useRef<{ geom: THREE.BufferGeometry; spec: PartSpec }[]>([]);
-  const proceduralMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
+  const hitTargetsRef = useRef<THREE.Object3D[]>([]);
+  const garmentRef = useRef<THREE.Group | null>(null);
+  const proceduralMatRef = useRef<THREE.MeshPhysicalMaterial | null>(null);
+  const garmentMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
   const glbRef = useRef<GlbHandle | null>(null);
   const betaRef = useRef<Beta>(DEFAULT_BETA);
   const targetYaw = useRef(0);
   const yaw = useRef(0);
   const dragging = useRef(false);
   const lastX = useRef(0);
+  const pointerStart = useRef({ x: 0, y: 0 });
+  const pointerMoved = useRef(false);
   const [beta, setBeta] = useState<Beta>(DEFAULT_BETA);
   const [view, setView] = useState("front");
   const [fps, setFps] = useState(0);
   const [mode, setMode] = useState<AssetMode>(() => assetModeFromLocation());
-  const [glbStatus, setGlbStatus] = useState<"idle" | "loading" | "ok" | "error" | "missing-morphs">("idle");
+  const [glbStatus, setGlbStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [glbError, setGlbError] = useState("");
+  const [showGarment, setShowGarment] = useState(true);
+  const [detail, setDetail] = useState<"hand" | "foot" | null>(null);
+  const [heightEntered, setHeightEntered] = useState(false);
+  const [manualWidths, setManualWidths] = useState<Partial<Record<WidthKey, true>>>({});
+  const [widthDraft, setWidthDraft] = useState<{ key: WidthKey; text: string } | null>(null);
+  const [fitNote, setFitNote] = useState("");
 
-  const girths = useMemo(() => measure(beta), [beta]);
+  function clearWidthFit() {
+    setManualWidths({});
+    setWidthDraft(null);
+    setFitNote("");
+  }
+
+  function commitWidth(key: WidthKey, raw: string) {
+    const value = Number(raw);
+    const result = fitWidths(betaRef.current, { [key]: value });
+    setWidthDraft(null);
+    if (!result.ok) {
+      setFitNote(result.reason);
+      return;
+    }
+    setBeta(result.beta);
+    setManualWidths({ [key]: true });
+    setFitNote("已按手填截面宽度调整示意人体。这不是围度，也不会保存。");
+  }
+
+  const dimensions = useMemo(() => previewDimensions(beta, heightEntered), [beta, heightEntered]);
   betaRef.current = beta;
 
   // 场景只建一次；程序化 / GLB 在 group 里切换
@@ -207,6 +246,7 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
       envMapIntensity: 0.7,
     });
     proceduralMatRef.current = material;
+    garmentMatRef.current = new THREE.MeshStandardMaterial({ color: 0x3a8e87, roughness: 0.92, side: THREE.DoubleSide });
 
     const group = new THREE.Group();
     groupRef.current = group;
@@ -246,6 +286,8 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
       renderer.dispose();
       pmrem.dispose();
       material.dispose();
+      garmentMatRef.current?.dispose();
+      scene.environment?.dispose();
       host.removeChild(renderer.domElement);
       groupRef.current = null;
       cameraRef.current = null;
@@ -260,25 +302,40 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
     }
     meshesRef.current.forEach((m) => m.geom.dispose());
     meshesRef.current = [];
+    hitTargetsRef.current = [];
+    garmentRef.current = null;
     glbRef.current?.dispose();
     glbRef.current = null;
   }
 
-  function mountProcedural(betaNow: Beta) {
+  function mountProcedural(betaNow: Beta, keepError = false) {
     const group = groupRef.current;
     const material = proceduralMatRef.current;
     if (!group || !material) return;
     clearVisual();
-    meshesRef.current = PARTS.map((spec) => {
+    const bodyGroup = new THREE.Group();
+    bodyGroup.name = "DemoBody";
+    const garmentGroup = new THREE.Group();
+    garmentGroup.name = "DemoGarment";
+    garmentGroup.visible = showGarment;
+    garmentRef.current = garmentGroup;
+    group.add(bodyGroup, garmentGroup);
+    hitTargetsRef.current = [bodyGroup];
+    meshesRef.current = [
+      ...BODY_PARTS.map((spec) => ({ spec, parent: bodyGroup, mat: material })),
+      ...GARMENT_PARTS.map((spec) => ({ spec, parent: garmentGroup, mat: garmentMatRef.current! })),
+    ].map(({ spec, parent, mat }) => {
       const geom = buildGeometry(spec, RADIAL);
       writePositions(geom, spec, betaNow);
-      const mesh = new THREE.Mesh(geom, material);
+      const mesh = new THREE.Mesh(geom, mat);
       mesh.castShadow = true;
-      group.add(mesh);
+      parent.add(mesh);
       return { geom, spec };
     });
-    setGlbStatus("idle");
-    setGlbError("");
+    if (!keepError) {
+      setGlbStatus("idle");
+      setGlbError("");
+    }
   }
 
   // 切换资产模式
@@ -303,16 +360,19 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
           return;
         }
         glbRef.current = handle;
+        hitTargetsRef.current = handle.bodyMeshes;
+        garmentRef.current = handle.garment;
+        handle.garment.visible = showGarment;
         group.add(handle.root);
         handle.applyBeta(betaRef.current);
-        setGlbStatus(handle.status === "ok" ? "ok" : "missing-morphs");
+        setGlbStatus("ok");
         if (cameraRef.current) fitCamera(cameraRef.current, betaRef.current.heightCm);
       })
       .catch((e) => {
         if (cancelled) return;
         setGlbStatus("error");
         setGlbError(e instanceof Error ? e.message : "GLB 加载失败");
-        mountProcedural(betaRef.current);
+        mountProcedural(betaRef.current, true);
       });
 
     return () => {
@@ -320,6 +380,10 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
+
+  useEffect(() => {
+    if (garmentRef.current) garmentRef.current.visible = showGarment;
+  }, [showGarment]);
 
   useEffect(() => {
     if (glbRef.current) {
@@ -332,16 +396,36 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
 
   function pointerDown(e: React.PointerEvent) {
     dragging.current = true;
+    pointerMoved.current = false;
+    pointerStart.current = { x: e.clientX, y: e.clientY };
     lastX.current = e.clientX;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }
   function pointerMove(e: React.PointerEvent) {
     if (!dragging.current) return;
+    if (Math.hypot(e.clientX - pointerStart.current.x, e.clientY - pointerStart.current.y) > 6) pointerMoved.current = true;
     targetYaw.current += (e.clientX - lastX.current) * 0.011;
     lastX.current = e.clientX;
     setView("");
   }
-  function pointerUp() {
+  function pointerUp(e: React.PointerEvent) {
+    if (dragging.current && !pointerMoved.current && cameraRef.current && groupRef.current) {
+      const canvas = e.currentTarget;
+      const bounds = canvas.getBoundingClientRect();
+      const ndc = new THREE.Vector2(
+        ((e.clientX - bounds.left) / bounds.width) * 2 - 1,
+        -((e.clientY - bounds.top) / bounds.height) * 2 + 1
+      );
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(ndc, cameraRef.current);
+      const hit = ray.intersectObjects(hitTargetsRef.current, true)[0];
+      if (hit) {
+        const height = betaRef.current.heightCm / 100;
+        const part = hit.point.y / height;
+        if (part < 0.11) setDetail("foot");
+        else if (part > 0.34 && part < 0.46 && Math.abs(hit.point.x) / height > 0.085) setDetail("hand");
+      }
+    }
     dragging.current = false;
   }
 
@@ -372,8 +456,8 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
   return (
     <div className="page mq-page">
       <button className="linkbtn" onClick={onBack}>返回</button>
-      <h1 className="h1" style={{ marginTop: 4 }}>调成你的样子</h1>
-      <p className="muted" style={{ margin: "4px 0 10px" }}>拖动人台可以转；只有三个杆，不用回忆厘米数。</p>
+      <h1 className="h1" style={{ marginTop: 4 }}>人台 · 本地演示</h1>
+      <p className="muted" style={{ margin: "4px 0 10px" }}>以下数字仅为演示网格推算，不是你的测量结果。拖动旋转，滑杆实时校准 3D；离开本页即丢弃，不保存、不上传。</p>
 
       <div className="mq-modes" role="tablist" aria-label="人台资产">
         <button
@@ -388,19 +472,22 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
           className={mode === "glb" ? "mq-mode on" : "mq-mode"}
           onClick={() => switchMode("glb")}
         >
-          GLB 资产
+          GLB 占位
         </button>
       </div>
       {mode === "glb" ? (
         <p className="mq-asset-note muted">
           {glbStatus === "loading" && "正在加载占位 GLB…"}
-          {glbStatus === "ok" && `已加载 ${PLACEHOLDER_MANIFEST.assetId}（morph → β）`}
-          {glbStatus === "missing-morphs" && "已加载，但部分 morph 名未对齐，请查 manifest"}
-          {glbStatus === "error" && `加载失败，已回退程序化：${glbError}`}
-          {glbStatus === "idle" && null}
+          {glbStatus === "ok" && `已加载 ${PLACEHOLDER_MANIFEST.assetId} 占位演示（非正式资产）`}
+          {glbStatus === "error" && `占位 GLB 不可用，已回退程序化演示：${glbError}`}
+          {glbStatus === "idle" && "GLB 仅为占位演示，非正式资产"}
         </p>
       ) : null}
 
+      <label className="mq-toggle">
+        <input type="checkbox" checked={showGarment} onChange={(e) => setShowGarment(e.target.checked)} />
+        显示独立示意衣服（非试穿、非正式服装资产）
+      </label>
       <div className="mq-stage">
         <div
           ref={hostRef}
@@ -408,7 +495,7 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
           onPointerDown={pointerDown}
           onPointerMove={pointerMove}
           onPointerUp={pointerUp}
-          onPointerCancel={pointerUp}
+          onPointerCancel={() => { dragging.current = false; }}
         />
         <div className="mq-views">
           {VIEWS.map((v) => (
@@ -422,21 +509,42 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
           ))}
         </div>
         {fps > 0 ? <div className="mq-fps">{fps} fps</div> : null}
+        <div className="mq-part-actions" aria-label="手脚详情">
+          <button type="button" onClick={() => setDetail("hand")}>手部详情</button>
+          <button type="button" onClick={() => setDetail("foot")}>脚部详情</button>
+        </div>
       </div>
+      {detail ? (
+        <div className="mq-detail" role="region" aria-label={`${detail === "hand" ? "手" : "脚"}部详情`}>
+          <div className="mq-detail-head"><b>{detail === "hand" ? "手部" : "脚部"} · 缺失</b><button type="button" onClick={() => setDetail(null)} aria-label="关闭详情">关闭</button></div>
+          {(detail === "hand" ? ["手掌长", "手掌宽", "手腕围", "臂长"] : ["脚长", "脚宽", "足围"]).map((item) => (
+            <div className="mq-detail-row" key={item}><span>{item}</span><span>未测 · 无照片测算值</span></div>
+          ))}
+          <p className="muted">示意网格的末端形状不代表真实手脚尺寸；此处不生成估值。</p>
+        </div>
+      ) : null}
 
       {view === "side" ? (
         <p className="mq-tip">侧面负责腰腹厚度——「肚子」这根杆只有在这个角度才看得懂。</p>
       ) : null}
 
       <div className="mq-row">
-        <label>身高</label>
+        <label htmlFor="mq-height">身高 · 手工录入仅本页</label>
         <input
+          id="mq-height"
           className="mq-num"
           type="number"
           min={140}
           max={200}
-          value={beta.heightCm}
-          onChange={(e) => setBeta({ ...beta, heightCm: Number(e.target.value) || 170 })}
+          defaultValue={DEFAULT_BETA.heightCm}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            if (Number.isFinite(value) && value >= 140 && value <= 200) {
+              setBeta((current) => ({ ...current, heightCm: value }));
+              setHeightEntered(true);
+              clearWidthFit();
+            }
+          }}
         />
         <span className="muted">厘米</span>
       </div>
@@ -453,30 +561,54 @@ export default function Mannequin3D({ onBack, onSave }: { onBack: () => void; on
             max={1}
             step={0.01}
             value={beta[s.key] as number}
-            onChange={(e) => setBeta({ ...beta, [s.key]: Number(e.target.value) })}
+            onChange={(e) => {
+              clearWidthFit();
+              setBeta({ ...beta, [s.key]: Number(e.target.value) });
+            }}
           />
         </div>
       ))}
 
-      <div className="mq-girths">
-        <div className="mq-girths-h">
-          <b>同一组 β 上量出来的</b>
-          <span className="muted">示意值，非真实档案</span>
-        </div>
-        <div className="mq-girths-row">
-          <span>胸围 {girths.chest.toFixed(1)}</span>
-          <span>腰围 {girths.waist.toFixed(1)}</span>
-          <span>臀围 {girths.hip.toFixed(1)}</span>
-        </div>
-        <p className="muted">
-          {mode === "glb"
-            ? "围度仍由 measure(β) 计算；GLB 只负责显示。换成美术资产后两边不能打架。"
-            : "拖杆时数字跟着动——网格和围度是同一组参数，不会对不上。"}
-        </p>
+      <div className="mq-dimensions">
+        <section className="mq-girths" aria-label="底部宽度面板">
+          <div className="mq-girths-h"><b>底部宽度 · 演示估值</b></div>
+          <div className="mq-girths-row">
+            {dimensions.widths.map((item) => {
+              const key = item.key as WidthKey;
+              return (
+                <label className="mq-dimension" key={item.label}>
+                  <span>{item.label}</span>
+                  <input
+                    inputMode="decimal"
+                    aria-label={item.label}
+                    value={widthDraft?.key === key ? widthDraft.text : (item.value?.toFixed(1) ?? "")}
+                    onFocus={() => setWidthDraft({ key, text: item.value?.toFixed(1) ?? "" })}
+                    onChange={(e) => setWidthDraft({ key, text: e.target.value })}
+                    onBlur={(e) => commitWidth(key, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    }}
+                  />
+                  <small>{manualWidths[key] ? "手工录入 · 仅本页" : item.source}</small>
+                </label>
+              );
+            })}
+          </div>
+          <p className="muted">这里改的是网格截面左右宽度，不是胸围等围度。胸宽和臀宽会一起带动胖瘦；改不动时保持原模型。不会保存或上传。</p>
+          {fitNote ? <p className="muted">{fitNote}</p> : null}
+        </section>
+        <section className="mq-height-panel" aria-label="右侧身高和上下身面板">
+          <b>身高 / 上下身</b>
+          {dimensions.heights.map((item) => (
+            <div className="mq-height-item" key={item.label}>
+              <span>{item.label}</span><strong>{item.value?.toFixed(1)} cm</strong><small>{item.source}</small>
+            </div>
+          ))}
+          <p className="muted">以示意胯线（身高 47%）分段：上身 53%、下身 47%；不是衣长、腿长或实测值。</p>
+        </section>
       </div>
-
-      <button className="btn btn-primary" onClick={() => onSave(beta)}>像了，存成我的人台</button>
-      <p className="muted" style={{ marginTop: 10 }}>捏出来的仍是弱档，拍照后才会准。</p>
+      <button className="btn btn-outline" onClick={onBack}>结束本地预览（不保存）</button>
+      <p className="muted" style={{ marginTop: 10 }}>无身体数据写入、无拍照、无上传；请勿将演示估值用于选码。</p>
     </div>
   );
 }

@@ -1,4 +1,21 @@
 .mq-page { padding-bottom: 40px; }
+.mq-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 10px 0; color: var(--teal-dark); }
+.mq-toggle input { accent-color: var(--teal-dark); }
+.mq-part-actions { position: absolute; right: 12px; bottom: 48px; display: grid; gap: 6px; }
+.mq-part-actions button, .mq-detail-head button { border: 1px solid var(--line); background: rgba(255,255,255,.92); border-radius: 10px; padding: 6px 9px; color: var(--teal-dark); cursor: pointer; font-size: 12px; }
+.mq-detail { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 16px; }
+.mq-detail-head, .mq-detail-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mq-detail-head { margin-bottom: 10px; }
+.mq-detail-row { padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.mq-detail-row span:last-child { color: var(--muted); }
+.mq-dimensions { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 10px; margin: 18px 0; align-items: start; }
+.mq-height-panel { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.mq-height-panel > b { font-size: 13px; }
+.mq-height-item { border-top: 1px solid var(--line); padding: 9px 0; display: grid; gap: 3px; font-size: 12px; }
+.mq-height-item strong { color: var(--teal-dark); font-size: 15px; }
+.mq-height-item small, .mq-dimension small { color: var(--muted); font-size: 10px; }
+.mq-height-panel p, .mq-girths p { font-size: 11px; margin: 8px 0 0; }
+@media (max-width: 370px) { .mq-dimensions { grid-template-columns: 1fr; } }
 
 .mq-stage {
   position: relative;
@@ -94,26 +111,38 @@
 .mq-girths {
   background: var(--mint);
   border-radius: 14px;
-  padding: 14px;
-  margin: 18px 0;
+  padding: 12px;
+  margin: 0;
+  min-width: 0;
 }
 .mq-girths-h { display: flex; justify-content: space-between; align-items: baseline; }
 .mq-girths-h b { font-size: 14px; }
 .mq-girths-h span { font-size: 11px; }
 .mq-girths-row {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
   margin: 10px 0 8px;
 }
-.mq-girths-row span {
-  flex: 1;
+.mq-dimension {
+  display: grid;
+  gap: 3px;
   background: #fff;
   border-radius: 10px;
-  padding: 9px 4px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 8px;
+  font-size: 12px;
+}
+.mq-dimension strong { color: var(--teal-dark); font-size: 15px; }
+.mq-dimension input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-size: 15px;
+  font-weight: 650;
   color: var(--teal-dark);
+  background: #fff;
 }
 
 .mq-tip {

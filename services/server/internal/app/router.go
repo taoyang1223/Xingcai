@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"os"
 
 	"github.com/gin-gonic/gin"
 
@@ -14,6 +15,7 @@ import (
 	identityrepo "github.com/taoyang1223/Xingcai/services/server/internal/identity/repo"
 	identitysvc "github.com/taoyang1223/Xingcai/services/server/internal/identity/service"
 	recommendapi "github.com/taoyang1223/Xingcai/services/server/internal/recommend/api"
+	"github.com/taoyang1223/Xingcai/services/server/internal/safesize"
 	"github.com/taoyang1223/Xingcai/services/server/internal/shared/health"
 	"github.com/taoyang1223/Xingcai/services/server/internal/shared/middleware"
 	"github.com/taoyang1223/Xingcai/services/server/internal/shared/trace"
@@ -49,6 +51,8 @@ func (a *App) Router() *gin.Engine {
 	recommendapi.Register(api)
 	feedbackapi.Register(api)
 	configapi.Register(api)
+	// 备份清除、KMS、独立审计与法务评估未就绪时默认禁用敏感数据闭环。
+	safesize.Register(api, a.PG, a.Box, []byte(a.Cfg.JWTSecret), os.Getenv("FITME_SAFE_SIZE_ENABLED") == "true" && a.Cfg.Env == "dev" && os.Getenv("FITME_CRYPTO_KEY") != "" && os.Getenv("FITME_JWT_SECRET") != "")
 
 	admin := r.Group("/admin/v1")
 	adminapi.Register(admin)

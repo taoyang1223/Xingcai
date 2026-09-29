@@ -218,6 +218,117 @@ function girth(a: number, b: number, heightCm: number, n = N_TORSO) {
 
 export type Girths = { chest: number; waist: number; hip: number };
 
+export type PreviewDimension = {
+  key?: string;
+  label: string;
+  value: number | null;
+  source: "演示推算" | "手工录入 · 仅本页" | "缺失 · 未测";
+};
+
+export const WIDTH_STATIONS = {
+  shoulder: 0.8,
+  chest: 0.735,
+  waist: 0.63,
+  hip: 0.54,
+} as const;
+
+export type WidthKey = keyof typeof WIDTH_STATIONS;
+
+/** 截面左右全宽，单位厘米。不是围度。 */
+export function sectionWidthCm(beta: Beta, h: number) {
+  return 2 * torsoAt(beta, h).a * beta.heightCm;
+}
+
+const FIT_TOLERANCE_CM = 1.5;
+
+export type FitWidthsResult = { ok: true; beta: Beta } | { ok: false; reason: string };
+
+function solveWidth(beta: Beta, param: "fat" | "belly" | "shoulder", h: number, target: number) {
+  const at = (value: number) => sectionWidthCm({ ...beta, [param]: value }, h);
+  const low = at(0);
+  const high = at(1);
+  const increasing = high >= low;
+  const outside = increasing ? target < low || target > high : target > low || target < high;
+  if (outside) {
+    const end = Math.abs(target - low) <= Math.abs(target - high) ? 0 : 1;
+    return { value: end, error: Math.abs(at(end) - target) };
+  }
+  let left = 0;
+  let right = 1;
+  for (let i = 0; i < 22; i++) {
+    const mid = (left + right) / 2;
+    const width = at(mid);
+    if ((increasing && width < target) || (!increasing && width > target)) left = mid;
+    else right = mid;
+  }
+  const value = (left + right) / 2;
+  return { value, error: Math.abs(at(value) - target) };
+}
+
+/**
+ * 用手填的截面宽度反推示意参数。胸宽和臀宽只能一起随胖瘦变，比例冲突或超出滑杆范围时不改模型。
+ * 结果仍是外观，不是软尺真值。
+ */
+export function fitWidths(beta: Beta, targets: Partial<Record<WidthKey, number>>): FitWidthsResult {
+  const keys = (Object.keys(WIDTH_STATIONS) as WidthKey[]).filter((key) => targets[key] != null);
+  if (keys.length === 0) return { ok: true, beta };
+  for (const key of keys) {
+    const value = targets[key] as number;
+    if (!Number.isFinite(value) || value <= 0) return { ok: false, reason: "宽度需要是正数，未改模型" };
+  }
+  if (targets.chest != null && targets.hip != null) {
+    const sample = { ...beta, fat: 0.45, belly: 0.35, shoulder: 0.5 };
+    const ratio = sectionWidthCm(sample, WIDTH_STATIONS.chest) / sectionWidthCm(sample, WIDTH_STATIONS.hip);
+    const asked = targets.chest / targets.hip;
+    if (Math.abs(asked - ratio) / ratio > 0.08) {
+      return { ok: false, reason: "胸宽和臀宽与示意人体的截面比例冲突，未改模型" };
+    }
+  }
+  let next: Beta = { ...beta };
+  const fatTarget = targets.hip ?? targets.chest;
+  if (fatTarget != null) {
+    const station = targets.hip != null ? WIDTH_STATIONS.hip : WIDTH_STATIONS.chest;
+    const solved = solveWidth(next, "fat", station, fatTarget);
+    if (solved.error > FIT_TOLERANCE_CM) return { ok: false, reason: "该宽度超出示意人体可调范围，未改模型" };
+    next = { ...next, fat: solved.value };
+  }
+  if (targets.waist != null) {
+    const solved = solveWidth(next, "belly", WIDTH_STATIONS.waist, targets.waist);
+    if (solved.error > FIT_TOLERANCE_CM) return { ok: false, reason: "腰宽超出示意人体可调范围，未改模型" };
+    next = { ...next, belly: solved.value };
+  }
+  if (targets.shoulder != null) {
+    const solved = solveWidth(next, "shoulder", WIDTH_STATIONS.shoulder, targets.shoulder);
+    if (solved.error > FIT_TOLERANCE_CM) return { ok: false, reason: "肩宽超出示意人体可调范围，未改模型" };
+    next = { ...next, shoulder: solved.value };
+  }
+  for (const key of keys) {
+    const got = sectionWidthCm(next, WIDTH_STATIONS[key]);
+    if (Math.abs(got - (targets[key] as number)) > FIT_TOLERANCE_CM) {
+      return { ok: false, reason: "这几项宽度不能同时落在示意人体上，未改模型" };
+    }
+  }
+  return { ok: true, beta: next };
+}
+
+/** 所有推算只针对参数化示意网格，不代表照片或真人尺寸。 */
+export function previewDimensions(beta: Beta, heightEntered: boolean) {
+  const width = (h: number) => 2 * torsoAt(beta, h).a * beta.heightCm;
+  return {
+    widths: [
+      { key: "shoulder", label: "肩宽", value: width(0.8), source: "演示推算" },
+      { key: "chest", label: "胸宽", value: width(0.735), source: "演示推算" },
+      { key: "waist", label: "腰宽", value: width(0.63), source: "演示推算" },
+      { key: "hip", label: "臀宽", value: width(0.54), source: "演示推算" },
+    ] as PreviewDimension[],
+    heights: [
+      { label: "身高", value: beta.heightCm, source: heightEntered ? "手工录入 · 仅本页" : "演示推算" },
+      { label: "上身示意段", value: beta.heightCm * 0.53, source: "演示推算" },
+      { label: "下身示意段", value: beta.heightCm * 0.47, source: "演示推算" },
+    ] as PreviewDimension[],
+  };
+}
+
 /**
  * 围度不是另填的数字，是从同一条轮廓上量出来的。
  * 腰取最细、臀取最宽，和软尺的找法一致。

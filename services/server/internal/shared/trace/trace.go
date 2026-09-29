@@ -10,7 +10,7 @@ const ContextKey = "trace_id"
 func Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tid := c.GetHeader("X-Request-Id")
-		if tid == "" {
+		if _, err := uuid.Parse(tid); err != nil || len(tid) > 36 {
 			tid = uuid.NewString()
 		}
 		c.Set(ContextKey, tid)

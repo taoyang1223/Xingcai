@@ -5,15 +5,13 @@ import type { MannequinManifest } from "./manifest";
 
 export type GlbHandle = {
   root: THREE.Group;
+  garment: THREE.Group;
+  bodyMeshes: THREE.Mesh[];
   applyBeta: (beta: Beta) => void;
   dispose: () => void;
-  /** morph 名 → 是否在资产里找到 */
-  bound: Record<string, boolean>;
-  status: "ok" | "missing-morphs";
 };
 
 type MorphSlot = {
-  mesh: THREE.Mesh;
   influences: number[];
   index: number;
 };
@@ -26,33 +24,11 @@ function collectMeshes(root: THREE.Object3D): THREE.Mesh[] {
   return out;
 }
 
-function ensureMorphNames(mesh: THREE.Mesh, names: string[]) {
-  if (!mesh.morphTargetInfluences?.length) return;
-  if (!mesh.morphTargetDictionary) mesh.morphTargetDictionary = {};
-  const dict = mesh.morphTargetDictionary;
-  if (Object.keys(dict).length > 0) return;
-  names.forEach((n, i) => {
-    if (i < mesh.morphTargetInfluences!.length) dict[n] = i;
-  });
-}
-
-function bindMorph(
-  meshes: THREE.Mesh[],
-  name: string,
-  fallbackIndex?: number
-): MorphSlot | null {
-  for (const mesh of meshes) {
-    const influences = mesh.morphTargetInfluences;
-    if (!influences) continue;
-    const dict = mesh.morphTargetDictionary;
-    if (dict && name in dict) {
-      return { mesh, influences, index: dict[name] };
-    }
-    if (fallbackIndex != null && fallbackIndex < influences.length) {
-      return { mesh, influences, index: fallbackIndex };
-    }
-  }
-  return null;
+function bindMorph(mesh: THREE.Mesh, name: string): MorphSlot | null {
+  const influences = mesh.morphTargetInfluences;
+  const index = mesh.morphTargetDictionary?.[name];
+  if (!influences || index == null || index >= influences.length) return null;
+  return { influences, index };
 }
 
 /**
@@ -71,21 +47,14 @@ export function morphWeightFromBeta(value: number, mid: number): number {
 export function applyBetaToGlb(
   root: THREE.Object3D,
   manifest: MannequinManifest,
-  slots: { fat: MorphSlot | null; belly: MorphSlot | null; shoulder: MorphSlot | null },
+  slots: { fat: MorphSlot[]; belly: MorphSlot[]; shoulder: MorphSlot[] },
   beta: Beta
 ) {
-  if (slots.fat) {
-    slots.fat.influences[slots.fat.index] = morphWeightFromBeta(beta.fat, DEFAULT_BETA.fat);
-  }
-  if (slots.belly) {
-    slots.belly.influences[slots.belly.index] = morphWeightFromBeta(beta.belly, DEFAULT_BETA.belly);
-  }
-  if (slots.shoulder) {
-    slots.shoulder.influences[slots.shoulder.index] = morphWeightFromBeta(
-      beta.shoulder,
-      DEFAULT_BETA.shoulder
-    );
-  }
+  slots.fat.forEach((slot) => { slot.influences[slot.index] = morphWeightFromBeta(beta.fat, DEFAULT_BETA.fat); });
+  slots.belly.forEach((slot) => { slot.influences[slot.index] = morphWeightFromBeta(beta.belly, DEFAULT_BETA.belly); });
+  slots.shoulder.forEach((slot) => {
+    slot.influences[slot.index] = morphWeightFromBeta(beta.shoulder, DEFAULT_BETA.shoulder);
+  });
 
   const s = beta.heightCm / manifest.baseHeightCm;
   if (manifest.heightMode === "scaleY") {
@@ -95,61 +64,68 @@ export function applyBetaToGlb(
   }
 }
 
-function polishMaterial(old: THREE.Material): THREE.Material {
-  const phys = new THREE.MeshPhysicalMaterial({
-    color: 0xcfc3b3,
-    roughness: 0.82,
+function polishMaterial(kind: "body" | "garment"): THREE.Material {
+  return new THREE.MeshPhysicalMaterial({
+    color: kind === "body" ? 0xcfc3b3 : 0x3a8e87,
+    roughness: kind === "body" ? 0.82 : 0.92,
     metalness: 0.02,
-    clearcoat: 0.12,
-    clearcoatRoughness: 0.55,
-    sheen: 0.18,
-    sheenRoughness: 0.7,
-    sheenColor: new THREE.Color(0xe8dcc8),
-    envMapIntensity: 0.7,
+    side: kind === "garment" ? THREE.DoubleSide : THREE.FrontSide,
   });
-  old.dispose();
-  return phys;
 }
 
 export async function loadGlbMannequin(manifest: MannequinManifest): Promise<GlbHandle> {
   const loader = new GLTFLoader();
   const gltf = await loader.loadAsync(manifest.glbUrl);
   const root = gltf.scene;
-  root.traverse((o) => {
-    const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh) return;
+  const garment = new THREE.Group();
+  garment.name = "DemoGarment";
+  root.add(garment);
+  const meshes = collectMeshes(root);
+  const bodyMeshes: THREE.Mesh[] = [];
+  const garmentMeshes: THREE.Mesh[] = [];
+  meshes.forEach((mesh) => {
+    const kind = /garment/i.test(mesh.name) ? "garment" : "body";
+    (kind === "garment" ? garmentMeshes : bodyMeshes).push(mesh);
     mesh.castShadow = true;
     mesh.receiveShadow = false;
-    if (Array.isArray(mesh.material)) {
-      mesh.material = mesh.material.map(polishMaterial);
-    } else if (mesh.material) {
-      mesh.material = polishMaterial(mesh.material);
-    }
+    const oldMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    mesh.material = polishMaterial(kind);
+    oldMaterials.forEach((mat) => mat?.dispose());
   });
+  garmentMeshes.forEach((mesh) => garment.attach(mesh));
 
-  const meshes = collectMeshes(root);
-  const orderedNames = [manifest.morphs.fat, manifest.morphs.belly, manifest.morphs.shoulder];
-  meshes.forEach((m) => ensureMorphNames(m, orderedNames));
+  const bindAll = (name: string) =>
+    [...bodyMeshes, ...garmentMeshes].map((mesh) => bindMorph(mesh, name)).filter((slot): slot is MorphSlot => slot !== null);
   const slots = {
-    fat: bindMorph(meshes, manifest.morphs.fat, 0),
-    belly: bindMorph(meshes, manifest.morphs.belly, 1),
-    shoulder: bindMorph(meshes, manifest.morphs.shoulder, 2),
+    fat: bindAll(manifest.morphs.fat),
+    belly: bindAll(manifest.morphs.belly),
+    shoulder: bindAll(manifest.morphs.shoulder),
   };
   const bound = {
-    [manifest.morphs.fat]: !!slots.fat,
-    [manifest.morphs.belly]: !!slots.belly,
-    [manifest.morphs.shoulder]: !!slots.shoulder,
+    [manifest.morphs.fat]: slots.fat.length === meshes.length,
+    [manifest.morphs.belly]: slots.belly.length === meshes.length,
+    [manifest.morphs.shoulder]: slots.shoulder.length === meshes.length,
   };
-  const missing = Object.values(bound).some((v) => !v);
+  const missing = !bodyMeshes.length || !garmentMeshes.length || Object.values(bound).some((v) => !v);
+  if (missing) {
+    root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.geometry.dispose();
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      mats.forEach((mat) => mat.dispose());
+    });
+    throw new Error("GLB 占位缺少人体/衣服独立网格或同驱 morph");
+  }
 
   const applyBeta = (beta: Beta) => applyBetaToGlb(root, manifest, slots, beta);
   applyBeta(DEFAULT_BETA);
 
   return {
     root,
+    garment,
+    bodyMeshes,
     applyBeta,
-    bound,
-    status: missing ? "missing-morphs" : "ok",
     dispose: () => {
       root.traverse((o) => {
         const mesh = o as THREE.Mesh;

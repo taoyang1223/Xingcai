@@ -58,6 +58,64 @@ export async function profile(): Promise<Envelope<Pick<Session, "uid" | "nicknam
   return parse(res);
 }
 
+async function authed<T>(path: string, method: string, body?: unknown): Promise<Envelope<T>> {
+  const token = getToken();
+  const res = await fetch(path, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token ?? ""}`,
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  return parse<T>(res);
+}
+
+export function grantBodyData(body: {
+  scene: "body_data";
+  policy_version: "body-data-v1";
+  agree: true;
+  ui_action: "separate_unchecked_checkbox";
+  policy_sha256: string;
+}) {
+  return authed<{ consent_id: string; evidence: string }>("/api/v1/user/consents", "POST", body);
+}
+
+export function createWeakProfile(body: {
+  consent_id: string;
+  height_cm: number;
+  body_shape: "standard" | "slim" | "broad";
+  measurements_cm?: Record<string, number>;
+}) {
+  return authed<{ uid: string }>("/api/v1/body/profiles", "POST", body);
+}
+
+export function saveSizeChart(productUID: string, body: {
+  category: "tshirt" | "shirt" | "pants";
+  unit: "cm" | "inch";
+  measure_mode: "flat_half" | "circumference";
+  sizes: { label: string; measurements: Record<string, number> }[];
+}) {
+  return authed<{ product_uid: string }>(`/api/v1/catalog/products/${productUID}/size-chart`, "POST", body);
+}
+
+export type SizeResult = {
+  main_size: string | null;
+  alternative: string | null;
+  diagnostics: { part: string; verdict: string }[];
+  uncertainty: string;
+  chart_basis: string;
+  rule_version: string;
+};
+
+export function recommendSize(profileUID: string, productUID: string) {
+  return authed<SizeResult>("/api/v1/recommend/size", "POST", { profile_uid: profileUID, product_uid: productUID });
+}
+
+export function revokeBodyData(consentID: string) {
+  return authed<{ revoked: boolean }>(`/api/v1/user/consents/${consentID}`, "DELETE");
+}
+
 export async function logout() {
   const token = getToken();
   if (token) {

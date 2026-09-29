@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: |
     C 端 `/api/v1` 与后台 `/admin/v1` 的唯一契约。
-    改接口先改本文件，再 `make gen-api`。骨架期业务接口返回 50002。
+    改接口先改本文件，再 `make gen-api`。安全选码接口仅在 dev 环境显式设置 FITME_SAFE_SIZE_ENABLED=true 并提供 FITME_CRYPTO_KEY、FITME_JWT_SECRET 时启用；默认及生产环境返回 50002。备份清理与独立审计等上线保障未就绪前不得用于真实身体数据。
 servers:
   - url: http://127.0.0.1:8080
     description: local
@@ -128,27 +128,100 @@ paths:
   /api/v1/user/consents:
     get:
       tags: [identity]
+      summary: 查询当前 body_data 单独同意状态（不返回身体数据）
       operationId: listConsents
+      security: [{ bearerAuth: [] }]
       responses:
-        "501": { $ref: "#/components/responses/NotImplemented" }
+        "200": { $ref: "#/components/responses/Success" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
     post:
       tags: [identity]
-      operationId: upsertConsent
+      summary: 独立、非默认勾选的 body_data 同意；仅接受当前政策版本
+      operationId: grantBodyDataConsent
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [scene, policy_version, agree, ui_action, policy_sha256]
+              properties:
+                scene: { type: string, const: body_data }
+                policy_version: { type: string, const: body-data-v1 }
+                agree: { type: boolean, const: true }
+                ui_action: { type: string, const: separate_unchecked_checkbox, description: 仅表示请求声明了独立勾选动作，不是生产环境同意留痕 }
+                policy_sha256: { type: string, minLength: 64, maxLength: 64, description: 当前政策正文的 SHA-256 }
       responses:
-        "501": { $ref: "#/components/responses/NotImplemented" }
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /api/v1/user/consents/{consent_id}:
+    delete:
+      tags: [identity]
+      summary: 撤回同意并在同一事务中删除本闭环全部身体档案与私有尺码表；备份清理另需部署保障
+      operationId: revokeBodyDataConsent
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: consent_id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/v1/body/profiles:
-    get:
-      tags: [body]
-      operationId: listBodyProfiles
-      responses:
-        "501": { $ref: "#/components/responses/NotImplemented" }
     post:
       tags: [body]
-      summary: 手动建档（批次 D 实现）
+      summary: 新建仅本人使用的加密弱档；不推断围度
       operationId: createBodyProfile
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [consent_id, height_cm, body_shape]
+              properties:
+                consent_id: { type: string, format: uuid }
+                height_cm: { type: number, minimum: 100, maximum: 230 }
+                weight_kg: { type: number, minimum: 25, maximum: 300, description: 可选，绝不用于推断围度 }
+                body_shape: { type: string, enum: [standard, slim, broad] }
+                measurements_cm:
+                  type: object
+                  additionalProperties: false
+                  description: 用户自行测量；未提供时只建弱档，不输出尺码
+                  properties:
+                    chest: { type: number, minimum: 40, maximum: 200 }
+                    waist: { type: number, minimum: 40, maximum: 200 }
+                    hip: { type: number, minimum: 40, maximum: 200 }
       responses:
-        "501": { $ref: "#/components/responses/NotImplemented" }
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+  /api/v1/body/profiles/{uid}:
+    get:
+      tags: [body]
+      summary: 本人读取加密弱档
+      operationId: getBodyProfile
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: uid, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [body]
+      summary: 本人删除弱档
+      operationId: deleteBodyProfile
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: uid, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { $ref: "#/components/responses/Success" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/v1/catalog/parse:
     post:
@@ -159,23 +232,69 @@ paths:
   /api/v1/catalog/products/{uid}/size-chart:
     post:
       tags: [catalog]
-      summary: 手填尺码表（批次 D 实现）
+      summary: 经 body_data 同意后创建本人私有手填尺码表；uid 为调用方自行指定的商品标识
       operationId: submitSizeChart
+      security: [{ bearerAuth: [] }]
       parameters:
-        - in: path
-          name: uid
-          required: true
-          schema: { type: string }
+        - { in: path, name: uid, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [category, unit, measure_mode, sizes]
+              properties:
+                category: { type: string, enum: [tshirt, shirt, pants] }
+                unit: { type: string, enum: [cm, inch] }
+                measure_mode: { type: string, enum: [flat_half, circumference] }
+                sizes:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [label, measurements]
+                    properties:
+                      label: { type: string, minLength: 1, maxLength: 16 }
+                      measurements:
+                        type: object
+                        additionalProperties: false
+                        description: 上衣必填 chest，裤装必填 waist 与 hip；仅接受对应品类围度
+                        properties:
+                          chest: { type: number, exclusiveMinimum: 0 }
+                          waist: { type: number, exclusiveMinimum: 0 }
+                          hip: { type: number, exclusiveMinimum: 0 }
       responses:
-        "501": { $ref: "#/components/responses/NotImplemented" }
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
 
   /api/v1/recommend/size:
     post:
       tags: [recommend]
-      summary: 尺码推荐（批次 D 实现）
+      summary: 只在本人已有实测围度且松量落入未经验证的品类带时给出主码；带外或缺少实测时不返回主码。尺码表口径由调用方声明
       operationId: recommendSize
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [profile_uid, product_uid]
+              properties:
+                profile_uid: { type: string, format: uuid }
+                product_uid: { type: string, format: uuid }
       responses:
-        "501": { $ref: "#/components/responses/NotImplemented" }
+        "200": { $ref: "#/components/responses/Success" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /admin/v1/auth/login:
     post:
@@ -185,6 +304,34 @@ paths:
         "501": { $ref: "#/components/responses/NotImplemented" }
 
 components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  responses:
+    Success:
+      description: 成功，data 按接口返回 consent_id / uid / main_size / alternative / diagnostics / uncertainty；无法判断时 main_size 与 alternative 为 null
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Envelope" }
+    BadRequest:
+      description: 请求无效
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Envelope" }
+    Unauthorized:
+      description: 未认证或账户不可用
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Envelope" }
+    ConsentRequired:
+      description: 缺少本人当前有效的 body_data 同意 (40301)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Envelope" }
+    NotFound:
+      description: 不存在或不属于本人
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Envelope" }
   schemas:
     Envelope:
       type: object
@@ -194,7 +341,6 @@ components:
         message: { type: string }
         data: {}
         trace_id: { type: string }
-  responses:
     NotImplemented:
       description: 骨架期未实现
       content:

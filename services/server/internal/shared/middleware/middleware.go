@@ -15,7 +15,7 @@ func AccessLog(log *slog.Logger) gin.HandlerFunc {
 		log.Info("http",
 			"trace_id", trace.From(c),
 			"method", c.Request.Method,
-			"path", c.Request.URL.Path,
+			"path", c.FullPath(),
 			"status", c.Writer.Status(),
 			"ms", time.Since(start).Milliseconds(),
 		)

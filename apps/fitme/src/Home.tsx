@@ -5,14 +5,11 @@ type Props = {
   hasProfile: boolean;
   preview: boolean;
   tab: string;
-  toast?: string;
   onTab: (t: string) => void;
   onPreview: () => void;
   onLogout: () => void;
-  onToast: (s: string) => void;
-  captured?: boolean;
-  onCapture: () => void;
   onShape: () => void;
+  onSize: () => void;
 };
 
 function Tabs({ tab, onTab }: { tab: string; onTab: (t: string) => void }) {
@@ -34,7 +31,7 @@ function Tabs({ tab, onTab }: { tab: string; onTab: (t: string) => void }) {
   );
 }
 
-export default function Home({ nickname, hasProfile, preview, tab, toast, onTab, onPreview, onLogout, onToast, captured, onCapture, onShape }: Props) {
+export default function Home({ nickname, hasProfile, preview, tab, onTab, onPreview, onLogout, onShape, onSize }: Props) {
   const ready = hasProfile || preview;
   const nickShort = nickname.replace("用户 ", "") || "7F2A";
 
@@ -46,7 +43,7 @@ export default function Home({ nickname, hasProfile, preview, tab, toast, onTab,
           <p className="muted" style={{ marginTop: 12 }}>
             {tab === "me"
               ? "账号为伪匿名展示名，可随时退出。"
-              : "下一批次接入对准拍摄与人台。"}
+              : "当前仅提供本地人台演示；拍照和尺码推荐尚未开放。"}
           </p>
           {tab === "me" ? (
             <div className="stack" style={{ marginTop: 24 }}>
@@ -70,18 +67,16 @@ export default function Home({ nickname, hasProfile, preview, tab, toast, onTab,
           <div className="avatar">{nickShort.slice(0, 4)}</div>
         </div>
 
-        {ready || captured ? (
+        {ready ? (
           <div className="hero">
             <Mannequin />
             <div>
               <div style={{ fontWeight: 650 }}>我的人台</div>
               <span className="pill">
-                {captured && !hasProfile && !preview ? "正侧已拍 · 待反解" : preview && !hasProfile ? "界面预览" : "18/22 已测"}
-                {hasProfile || preview ? " · 推荐可用" : ""}
+                {preview && !hasProfile ? "首页界面演示 · 无真实尺寸" : "档案状态未知 · 请核对来源"}
               </span>
               <div>
-                <button className="linkbtn" onClick={onShape}>再捏一下人台</button>
-                <button className="linkbtn" onClick={onCapture}>拍照补测</button>
+                <button className="linkbtn" onClick={onShape}>打开本地人台演示</button>
               </div>
             </div>
           </div>
@@ -90,60 +85,33 @@ export default function Home({ nickname, hasProfile, preview, tab, toast, onTab,
             <Mannequin faded />
             <div>
               <div style={{ fontWeight: 650 }}>还没有你的人台</div>
-              <p className="muted" style={{ margin: "6px 0 10px" }}>一部手机，靠墙拍正侧两张。</p>
-              <button className="btn btn-primary btn-sm" onClick={onShape}>调成我的样子</button>
-              <div>
-                <button className="linkbtn" onClick={onCapture}>拍照建档 · 阶段 2</button>
-              </div>
+              <p className="muted" style={{ margin: "6px 0 10px" }}>可查看无拍照的本地演示；尺寸非实测。</p>
+              <button className="btn btn-primary btn-sm" onClick={onShape}>打开人台演示</button>
             </div>
           </div>
         )}
 
-        <div className={`paste ${ready ? "" : "disabled"}`}>
+        <div className="paste disabled">
           <span>🔗</span>
-          <input readOnly placeholder="粘贴淘宝链接，看穿哪个码" />
-          <button className="btn btn-primary btn-sm" onClick={() => onToast("下一批次：尺码推荐")}>推荐尺码</button>
+          <input readOnly placeholder="尺码推荐尚未开放" />
+          <button className="btn btn-primary btn-sm" disabled>推荐尺码未开放</button>
         </div>
-        <p className="muted" style={{ marginTop: 8 }}>也可以手填尺码表 · 照片不上传云端留存</p>
+        <p className="muted" style={{ marginTop: 8 }}>人台演示尺寸不可用于尺码推荐；拍照功能尚未开放。</p>
+        <button className="linkbtn" onClick={onSize}>开发环境手填选码</button>
 
-        {ready ? (
-          <>
-            <div className="section-h">
-              <b>最近推荐</b>
-              <span className="muted">全部</span>
-            </div>
-            <div className="card">
-              <div className="thumb" />
-              <div>
-                <div>纯棉宽松长袖衬衫</div>
-                <div style={{ marginTop: 6 }}><span className="badge">推荐 L</span><span className="muted">置信度 86%</span></div>
-                <div className="muted">袖长可能偏短</div>
-              </div>
-            </div>
-            <div className="card">
-              <div className="thumb" />
-              <div>
-                <div>直筒休闲西裤</div>
-                <div style={{ marginTop: 6 }}><span className="badge">推荐 32</span><span className="muted">置信度 74%</span></div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="steps">
-            <span>1 对准拍正侧</span>
-            <span>2 粘贴链接</span>
-            <span>3 看推荐码</span>
-          </div>
-        )}
+        <div className="steps">
+          <span>1 查看本地演示</span>
+          <span>2 区分推算与未测</span>
+          <span>3 不用于选码</span>
+        </div>
 
         {!hasProfile ? (
           <button className="linkbtn" onClick={onPreview}>{preview ? "回到空态首页" : "预览已建档首页"}</button>
         ) : null}
 
-        <div className="privacy">人体照片处理完即删，不留原图</div>
+        <div className="privacy">本地人台演示不请求摄像头、不上传身体数据、不保存输入。</div>
       </div>
       <Tabs tab={tab} onTab={onTab} />
-      {toast ? <div className="toast">{toast}</div> : null}
     </>
   );
 }

@@ -45,8 +45,8 @@ func Parse(secret []byte, token string) (Claims, error) {
 	if err := json.Unmarshal(raw, &c); err != nil {
 		return zero, err
 	}
-	if time.Now().Unix() >= c.Exp {
-		return zero, errors.New("expired")
+	if time.Now().Unix() >= c.Exp || c.UserID <= 0 || c.UID == "" {
+		return zero, errors.New("expired or invalid claims")
 	}
 	return c, nil
 }
