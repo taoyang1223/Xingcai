@@ -33,7 +33,7 @@ export type MannequinManifest = {
 export const PLACEHOLDER_MANIFEST: MannequinManifest = {
   assetId: "hunyuan_preview",
   glbUrl: "/mannequin/hunyuan_preview.glb?v=2",
-  bodyCompleteUrl: "/mannequin/body_complete.glb?v=10",
+  bodyCompleteUrl: "/mannequin/body_complete.glb?v=16",
   format: "glb",
   units: "meters",
   upAxis: "Y",

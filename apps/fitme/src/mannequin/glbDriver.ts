@@ -77,21 +77,37 @@ function polishMaterial(kind: "body" | "garment"): THREE.Material {
   });
 }
 
-/** 衣服沿法线外移，避免和里面的身体贴在同一面上发虚。 */
-function liftAlongNormals(geometry: THREE.BufferGeometry, amount: number) {
+/** 同一套衣服顶点往身体里收。袖子收进躯干，裤管收细，头和手脚不动。 */
+function tightenSameMesh(geometry: THREE.BufferGeometry) {
   const pos = geometry.getAttribute("position");
   if (!geometry.getAttribute("normal")) geometry.computeVertexNormals();
   const nor = geometry.getAttribute("normal");
-  if (!pos || !nor) return;
+  if (!pos || !nor || pos.count === 0) return;
+  let cx = 0;
+  let cz = 0;
   for (let i = 0; i < pos.count; i++) {
+    cx += pos.getX(i);
+    cz += pos.getZ(i);
+  }
+  cx /= pos.count;
+  cz /= pos.count;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const dx = x - cx;
+    const sleeve = Math.abs(dx) > 0.13 && y > 0.5 && y < 1.0;
+    const pull = sleeve ? 0.78 : 0.16;
+    const inward = sleeve ? 0.006 : 0.014;
     pos.setXYZ(
       i,
-      pos.getX(i) + nor.getX(i) * amount,
-      pos.getY(i) + nor.getY(i) * amount,
-      pos.getZ(i) + nor.getZ(i) * amount,
+      x - dx * pull - nor.getX(i) * inward,
+      y - nor.getY(i) * inward * 0.15,
+      z - (z - cz) * (sleeve ? 0.4 : 0.12) - nor.getZ(i) * inward,
     );
   }
   pos.needsUpdate = true;
+  geometry.computeVertexNormals();
 }
 
 export async function loadGlbMannequin(manifest: MannequinManifest): Promise<GlbHandle> {
@@ -116,7 +132,9 @@ export async function loadGlbMannequin(manifest: MannequinManifest): Promise<Glb
   const sourceBody = [...bodyMeshes];
   const underMeshes: THREE.Mesh[] = [];
   garmentMeshes.forEach((mesh) => {
-    const under = new THREE.Mesh(mesh.geometry.clone(), polishMaterial("body"));
+    const underGeom = mesh.geometry.clone();
+    tightenSameMesh(underGeom);
+    const under = new THREE.Mesh(underGeom, polishMaterial("body"));
     under.name = "body_under";
     under.castShadow = true;
     under.position.copy(mesh.position);
@@ -125,7 +143,6 @@ export async function loadGlbMannequin(manifest: MannequinManifest): Promise<Glb
     mesh.parent?.add(under);
     underMeshes.push(under);
     bodyMeshes.push(under);
-    liftAlongNormals(mesh.geometry, 0.004);
     garment.attach(mesh);
   });
 
@@ -143,7 +160,6 @@ export async function loadGlbMannequin(manifest: MannequinManifest): Promise<Glb
         const oldMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         mesh.material = polishMaterial("body");
         oldMaterials.forEach((mat) => mat?.dispose());
-        bodyMeshes.push(mesh);
       });
       complete.add(extra.scene);
     } catch {
@@ -155,7 +171,7 @@ export async function loadGlbMannequin(manifest: MannequinManifest): Promise<Glb
     const filled = complete.children.length > 0;
     garment.visible = show;
     sourceBody.forEach((mesh) => { mesh.visible = show || !filled; });
-    underMeshes.forEach((mesh) => { mesh.visible = !show && !filled; });
+    underMeshes.forEach((mesh) => { mesh.visible = false; });
     complete.visible = !show && filled;
   };
   setClothesVisible(true);
